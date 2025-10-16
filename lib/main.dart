@@ -1,0 +1,53 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+// Providers
+import 'providers/product_provider.dart';
+import 'providers/order_provider.dart';
+
+// Screens
+import 'screens/login_screen.dart';
+import 'screens/dashboard_screen.dart';
+import 'screens/manage_products_screen.dart';
+import 'screens/manage_orders_screen.dart';
+import 'screens/add_product_screen.dart';
+import 'screens/admin_home_screen.dart';
+
+void main() {
+  runApp(const AdminApp());
+}
+
+class AdminApp extends StatelessWidget {
+  const AdminApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ProductProvider()),
+        ChangeNotifierProvider(create: (_) => OrderProvider()),
+      ],
+      child: MaterialApp(
+        title: 'Admin Panel - Natural Fruits & Vegetables',
+        theme: ThemeData(
+          primarySwatch: Colors.green,
+          scaffoldBackgroundColor: const Color(0xFFF8F8FF),
+        ),
+        debugShowCheckedModeBanner: false,
+
+        // Start with login screen
+        initialRoute: '/login',
+
+        routes: {
+          '/login': (context) => const LoginScreen(),
+          '/dashboard': (context) => const DashboardScreen(),
+          '/manage-products': (context) => const ManageProductsScreen(),
+          '/manage-orders': (context) => const ManageOrdersScreen(),
+          '/add-product': (context) => const AddProductScreen(),
+          '/admin-home': (context) => const AdminHomeScreen(),
+        },
+      ),
+    );
+  }
+}
+
