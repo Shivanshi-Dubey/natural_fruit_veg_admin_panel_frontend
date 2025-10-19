@@ -15,7 +15,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
   @override
   void initState() {
     super.initState();
-    // ✅ Delay fetchProducts until after the first frame is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<ProductProvider>(context, listen: false).fetchProducts();
     });
@@ -91,35 +90,32 @@ class _ProductListScreenState extends State<ProductListScreen> {
                           margin: const EdgeInsets.all(8),
                           child: ListTile(
                             leading: Image.network(
-                              product.imageUrl,
+                              product.imagePath,
                               width: 50,
                               height: 50,
                               fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
                             ),
                             title: Text(product.name),
                             subtitle: Text(
-                                '₹${product.price} | Stock: ${product.stock} | ${product.category}'),
+                                '₹${product.price} | Qty: ${product.quantity} | ${product.category}'),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
-                                  icon:
-                                      const Icon(Icons.edit, color: Colors.blue),
+                                  icon: const Icon(Icons.edit, color: Colors.blue),
                                   onPressed: () {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (_) =>
-                                            AddProductScreen(product: product),
+                                        builder: (_) => AddProductScreen(product: product),
                                       ),
                                     );
                                   },
                                 ),
                                 IconButton(
-                                  icon:
-                                      const Icon(Icons.delete, color: Colors.red),
-                                  onPressed: () =>
-                                      _confirmDelete(context, product),
+                                  icon: const Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () => _confirmDelete(context, product),
                                 ),
                               ],
                             ),

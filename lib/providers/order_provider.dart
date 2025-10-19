@@ -12,28 +12,35 @@ class OrderProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  final String baseUrl = 'https://natural-fruit-veg-admin-panel-backend.onrender.com/api/orders'; // Adjust your backend endpoint
+  final String baseUrl =
+      'https://natural-fruit-veg-admin-panel-backend.onrender.com/api/orders';
 
-  Future<void> fetchOrders() async {
-    _isLoading = true;
-    notifyListeners();
+Future<void> fetchOrders() async {
+  _isLoading = true;
+  _errorMessage = null;
+  notifyListeners();
 
-    try {
-      final response = await http.get(Uri.parse(baseUrl));
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        _orders = data.map((e) => Order.fromJson(e)).toList();
-        _errorMessage = null;
-      } else {
-        _errorMessage = 'Failed to load orders';
-      }
-    } catch (e) {
-      _errorMessage = 'Error: $e';
+  try {
+    final response = await http.get(Uri.parse(baseUrl));
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+
+      final List<dynamic> orderList =
+          data is List ? data : (data['orders'] ?? []);
+
+      _orders = orderList.map((e) => Order.fromJson(e)).toList();
+    } else {
+      _errorMessage = 'Failed to load orders (${response.statusCode})';
     }
-
-    _isLoading = false;
-    notifyListeners();
+  } catch (e) {
+    _errorMessage = 'Error: $e';
   }
+
+  _isLoading = false;
+  notifyListeners();
+}
+
 
   Future<void> updateOrderStatus(String orderId, String status) async {
     try {
@@ -44,7 +51,7 @@ class OrderProvider with ChangeNotifier {
       );
 
       if (response.statusCode == 200) {
-        fetchOrders();
+        await fetchOrders();
       } else {
         _errorMessage = 'Failed to update order status';
         notifyListeners();

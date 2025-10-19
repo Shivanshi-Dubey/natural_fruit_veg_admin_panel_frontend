@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../models/product_model.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../models/product_model.dart';
 
 class ProductProvider with ChangeNotifier {
   List<Product> _products = [];
@@ -12,29 +12,37 @@ class ProductProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  final String baseUrl = 'https://natural-fruit-veg-admin-panel-backend.onrender.com/api/products'; // Backend URL
+  final String baseUrl =
+      'https://natural-fruit-veg-admin-panel-backend.onrender.com/api/products';
 
-  Future<void> fetchProducts() async {
-    _isLoading = true;
-    _errorMessage = null;
-    // ✅ Do not notifyListeners here to avoid build-time calls
+Future<void> fetchProducts() async {
+  _isLoading = true;
+  _errorMessage = null;
+  notifyListeners();
 
-    try {
-      final response = await http.get(Uri.parse(baseUrl));
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        _products = data.map((e) => Product.fromJson(e)).toList();
-        _errorMessage = null;
-      } else {
-        _errorMessage = 'Failed to load products';
-      }
-    } catch (e) {
-      _errorMessage = 'Error: $e';
+  try {
+    final response = await http.get(Uri.parse(baseUrl));
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+
+      // handle both possible cases
+      final List<dynamic> productList =
+          data is List ? data : (data['products'] ?? []);
+
+      _products = productList.map((e) => Product.fromJson(e)).toList();
+      _errorMessage = null;
+    } else {
+      _errorMessage = 'Failed to load products (${response.statusCode})';
     }
-
-    _isLoading = false;
-    notifyListeners(); // ✅ Notify only after data is fetched
+  } catch (e) {
+    _errorMessage = 'Error: $e';
   }
+
+  _isLoading = false;
+  notifyListeners();
+}
+
 
   Future<void> addProduct(Product product) async {
     try {
@@ -43,6 +51,7 @@ class ProductProvider with ChangeNotifier {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(product.toJson()),
       );
+
       if (response.statusCode == 201) {
         await fetchProducts();
       } else {
@@ -62,12 +71,13 @@ class ProductProvider with ChangeNotifier {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(product.toJson()),
       );
+
       if (response.statusCode == 200) {
         final index = _products.indexWhere((p) => p.id == product.id);
         if (index != -1) {
           _products[index] = product;
-          notifyListeners();
         }
+        notifyListeners();
       } else {
         _errorMessage = 'Failed to update product';
         notifyListeners();

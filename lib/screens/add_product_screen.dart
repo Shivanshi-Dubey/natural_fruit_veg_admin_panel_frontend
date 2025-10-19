@@ -15,32 +15,26 @@ class AddProductScreen extends StatefulWidget {
 class _AddProductScreenState extends State<AddProductScreen> {
   final _formKey = GlobalKey<FormState>();
   late String _name;
-  late String _description;
   late double _price;
-  double? _discountPrice; // Nullable
-  late String _imageUrl;
+  late String _imagePath;
   late String _category;
-  late int _stock;
+  late int _quantity;
 
   @override
   void initState() {
     super.initState();
     if (widget.product != null) {
       _name = widget.product!.name;
-      _description = widget.product!.description;
       _price = widget.product!.price;
-      _discountPrice = widget.product!.discountPrice; // ✅ Fixed null safety
-      _imageUrl = widget.product!.imageUrl;
+      _imagePath = widget.product!.imagePath;
       _category = widget.product!.category;
-      _stock = widget.product!.stock;
+      _quantity = widget.product!.quantity;
     } else {
       _name = '';
-      _description = '';
       _price = 0.0;
-      _discountPrice = null;
-      _imageUrl = '';
+      _imagePath = '';
       _category = '';
-      _stock = 0;
+      _quantity = 0;
     }
   }
 
@@ -50,20 +44,17 @@ class _AddProductScreenState extends State<AddProductScreen> {
       final newProduct = Product(
         id: widget.product?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         name: _name,
-        description: _description,
         price: _price,
-        discountPrice: _discountPrice,
-        imageUrl: _imageUrl,
+        imagePath: _imagePath,
         category: _category,
-        quantity: 0,
-        stock: _stock,
+        quantity: _quantity,
       );
 
       final productProvider = Provider.of<ProductProvider>(context, listen: false);
       if (widget.product == null) {
         productProvider.addProduct(newProduct);
       } else {
-        productProvider.updateProduct(newProduct); // ✅ Now works
+        productProvider.updateProduct(newProduct);
       }
 
       Navigator.pop(context);
@@ -86,45 +77,33 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 initialValue: _name,
                 decoration: const InputDecoration(labelText: 'Name'),
                 onSaved: (value) => _name = value!,
-                validator: (value) => value!.isEmpty ? 'Enter name' : null,
-              ),
-              TextFormField(
-                initialValue: _description,
-                decoration: const InputDecoration(labelText: 'Description'),
-                onSaved: (value) => _description = value!,
-                validator: (value) => value!.isEmpty ? 'Enter description' : null,
+                validator: (value) => value!.isEmpty ? 'Enter product name' : null,
               ),
               TextFormField(
                 initialValue: _price.toString(),
                 decoration: const InputDecoration(labelText: 'Price'),
                 keyboardType: TextInputType.number,
                 onSaved: (value) => _price = double.parse(value!),
+                validator: (value) => value!.isEmpty ? 'Enter price' : null,
               ),
               TextFormField(
-                initialValue: _discountPrice?.toString() ?? '',
-                decoration: const InputDecoration(labelText: 'Discount Price (optional)'),
-                keyboardType: TextInputType.number,
-                onSaved: (value) {
-                  if (value != null && value.isNotEmpty) {
-                    _discountPrice = double.parse(value);
-                  }
-                },
-              ),
-              TextFormField(
-                initialValue: _imageUrl,
-                decoration: const InputDecoration(labelText: 'Image URL'),
-                onSaved: (value) => _imageUrl = value!,
+                initialValue: _imagePath,
+                decoration: const InputDecoration(labelText: 'Image Path'),
+                onSaved: (value) => _imagePath = value!,
+                validator: (value) => value!.isEmpty ? 'Enter image path' : null,
               ),
               TextFormField(
                 initialValue: _category,
                 decoration: const InputDecoration(labelText: 'Category'),
                 onSaved: (value) => _category = value!,
+                validator: (value) => value!.isEmpty ? 'Enter category' : null,
               ),
               TextFormField(
-                initialValue: _stock.toString(),
-                decoration: const InputDecoration(labelText: 'Stock'),
+                initialValue: _quantity.toString(),
+                decoration: const InputDecoration(labelText: 'Quantity'),
                 keyboardType: TextInputType.number,
-                onSaved: (value) => _stock = int.parse(value!),
+                onSaved: (value) => _quantity = int.parse(value!),
+                validator: (value) => value!.isEmpty ? 'Enter quantity' : null,
               ),
               const SizedBox(height: 20),
               ElevatedButton(

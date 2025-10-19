@@ -34,10 +34,7 @@ class AdminApp extends StatelessWidget {
           scaffoldBackgroundColor: const Color(0xFFF8F8FF),
         ),
         debugShowCheckedModeBanner: false,
-
-        // Start with login screen
         initialRoute: '/login',
-
         routes: {
           '/login': (context) => const LoginScreen(),
           '/dashboard': (context) => const DashboardScreen(),

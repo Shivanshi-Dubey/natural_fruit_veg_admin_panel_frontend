@@ -4,37 +4,33 @@ import 'package:flutter/foundation.dart';
 class Product {
   final String id;
   final String name;
-  final String description;
-  final double price;
-  final String imageUrl;
-  final String category; // fruits, vegetables, juices
+  final int price;
+  final String imagePath; // ✅ matches backend
+  final String category;
   final int quantity;
 
   const Product({
     required this.id,
     required this.name,
-    required this.description,
     required this.price,
-    required this.imageUrl,
+    required this.imagePath,
     required this.category,
-    this.quantity = 0,
+    required this.quantity,
   });
 
   Product copyWith({
     String? id,
     String? name,
-    String? description,
-    double? price,
-    String? imageUrl,
+    int? price,
+    String? imagePath,
     String? category,
     int? quantity,
   }) {
     return Product(
       id: id ?? this.id,
       name: name ?? this.name,
-      description: description ?? this.description,
       price: price ?? this.price,
-      imageUrl: imageUrl ?? this.imageUrl,
+      imagePath: imagePath ?? this.imagePath,
       category: category ?? this.category,
       quantity: quantity ?? this.quantity,
     );
@@ -44,11 +40,10 @@ class Product {
     return Product(
       id: json['_id'] ?? '',
       name: json['name'] ?? '',
-      description: json['description'] ?? '',
-      price: (json['price'] ?? 0).toDouble(),
-      imageUrl: json['imageUrl'] ?? '',
+      price: json['price']?.toInt() ?? 0,
+      imagePath: json['imagePath'] ?? json['image'] ?? '',
       category: json['category'] ?? '',
-      quantity: json['quantity'] ?? 0,
+      quantity: json['quantity']?.toInt() ?? 0,
     );
   }
 
@@ -56,9 +51,8 @@ class Product {
     return {
       '_id': id,
       'name': name,
-      'description': description,
       'price': price,
-      'imageUrl': imageUrl,
+      'imagePath': imagePath,
       'category': category,
       'quantity': quantity,
     };
