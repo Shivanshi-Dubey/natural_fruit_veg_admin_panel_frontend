@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import 'dashboard_screen.dart'; // after successful login
 
 class LoginScreen extends StatefulWidget {
@@ -13,29 +15,24 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  bool _isLoading = false;
-
-  void _login() {
+  void _login() async {
     if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final success = await authProvider.login(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+      );
 
-      // Temporary: simulate login delay
-      Future.delayed(const Duration(seconds: 2), () {
-        setState(() => _isLoading = false);
-
-        // Simple dummy check
-        if (_emailController.text == 'admin@gmail.com' &&
-            _passwordController.text == 'admin123') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const DashboardScreen()),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid credentials')),
-          );
-        }
-      });
+      if (success) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(authProvider.errorMessage ?? 'Login failed')),
+        );
+      }
     }
   }
 
@@ -43,19 +40,21 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F8FF),
-      body: Center(
-        child: Card(
-          elevation: 10,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Padding(
-            padding: const EdgeInsets.all(30.0),
-            child: Form(
-              key: _formKey,
-              child: SizedBox(
-                width: 350,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+      body: Consumer<AuthProvider>(
+        builder: (context, authProvider, child) {
+          return Center(
+            child: Card(
+              elevation: 10,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.all(30.0),
+                child: Form(
+                  key: _formKey,
+                  child: SizedBox(
+                    width: 350,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                     const Text(
                       "Admin Login",
                       style: TextStyle(
@@ -87,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           value!.isEmpty ? "Enter your password" : null,
                     ),
                     const SizedBox(height: 30),
-                    _isLoading
+                    authProvider.isLoading
                         ? const CircularProgressIndicator()
                         : ElevatedButton(
                             onPressed: _login,
@@ -105,12 +104,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                   color: Colors.white, fontSize: 18),
                             ),
                           ),
-                  ],
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

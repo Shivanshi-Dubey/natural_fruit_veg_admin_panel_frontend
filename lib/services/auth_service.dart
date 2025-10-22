@@ -35,6 +35,31 @@ class AuthService {
 
   static Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.containsKey('token');
+    final token = prefs.getString('token');
+    if (token == null || token.isEmpty) return false;
+    
+    // Validate token by making a test request
+    try {
+      final url = Uri.parse('$baseUrl/auth/verify');
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        // Token is invalid, clear it
+        await logout();
+        return false;
+      }
+    } catch (e) {
+      // Network error or invalid token
+      await logout();
+      return false;
+    }
   }
 }
