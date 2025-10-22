@@ -12,22 +12,20 @@ class OrderProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  final String baseUrl =
-      'https://natural-fruit-veg-admin-panel-backend.onrender.com/api/orders';
+  final String baseUrl = 'https://natural-fruit-veg-backend.onrender.com/api/orders'; // Adjust your backend endpoint
 
   Future<void> fetchOrders() async {
     _isLoading = true;
-    _errorMessage = null;
     notifyListeners();
 
     try {
       final response = await http.get(Uri.parse(baseUrl));
-
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         _orders = data.map((e) => Order.fromJson(e)).toList();
+        _errorMessage = null;
       } else {
-        _errorMessage = 'Failed to load orders (${response.statusCode})';
+        _errorMessage = 'Failed to load orders';
       }
     } catch (e) {
       _errorMessage = 'Error: $e';
@@ -46,7 +44,7 @@ class OrderProvider with ChangeNotifier {
       );
 
       if (response.statusCode == 200) {
-        await fetchOrders();
+        fetchOrders();
       } else {
         _errorMessage = 'Failed to update order status';
         notifyListeners();

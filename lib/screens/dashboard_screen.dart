@@ -4,7 +4,6 @@ import '../models/product_model.dart';
 import '../models/order_model.dart';
 import '../providers/product_provider.dart';
 import '../providers/order_provider.dart';
-import '../providers/auth_provider.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -17,8 +16,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-
-    // ✅ Fetch data only once when the screen is opened
+    // Fetch latest data when dashboard opens
     Future.microtask(() {
       Provider.of<ProductProvider>(context, listen: false).fetchProducts();
       Provider.of<OrderProvider>(context, listen: false).fetchOrders();
@@ -49,14 +47,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return sortedEntries.take(3).toList();
   }
 
-  Future<void> _logout() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    await authProvider.logout();
-    if (mounted) {
-      Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final productProvider = Provider.of<ProductProvider>(context);
@@ -64,22 +54,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final allProducts = productProvider.products;
     final allOrders = orderProvider.orders;
+
     final totalRevenue = getTotalRevenue(allOrders);
     final topProducts = getTopSellingProducts(allOrders);
+
+    final isLoading = productProvider.isLoading || orderProvider.isLoading;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
         backgroundColor: Colors.green.shade700,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _logout,
-            tooltip: 'Logout',
-          ),
-        ],
       ),
-      body: productProvider.isLoading || orderProvider.isLoading
+      body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : Padding(
               padding: const EdgeInsets.all(16.0),
@@ -120,17 +106,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-                  topProducts.isEmpty
-                      ? const Text('No top-selling products yet.')
-                      : Column(
-                          children: topProducts.map(
-                            (entry) => ListTile(
-                              leading: const Icon(Icons.local_grocery_store),
-                              title: Text(entry.key),
-                              trailing: Text('Sold: ${entry.value}'),
-                            ),
-                          ).toList(),
-                        ),
+                  ...topProducts.map(
+                    (entry) => ListTile(
+                      leading: const Icon(Icons.local_grocery_store),
+                      title: Text(entry.key),
+                      trailing: Text('Sold: ${entry.value}'),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -170,8 +152,8 @@ class DashboardCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w500),
+                    style:
+                        const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 4),
                   Text(

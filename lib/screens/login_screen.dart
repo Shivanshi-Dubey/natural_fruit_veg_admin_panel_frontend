@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
-import 'dashboard_screen.dart'; // after successful login
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,107 +8,33 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
 
-  void _login() async {
-    if (_formKey.currentState!.validate()) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final success = await authProvider.login(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
+  void login() {
+    if (emailController.text == 'admin' && passwordController.text == 'admin123') {
+      Navigator.pushReplacementNamed(context, '/dashboard');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid credentials')),
       );
-
-      if (success) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const DashboardScreen()),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(authProvider.errorMessage ?? 'Login failed')),
-        );
-      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8FF),
-      body: Consumer<AuthProvider>(
-        builder: (context, authProvider, child) {
-          return Center(
-            child: Card(
-              elevation: 10,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.all(30.0),
-                child: Form(
-                  key: _formKey,
-                  child: SizedBox(
-                    width: 350,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                    const Text(
-                      "Admin Login",
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: const InputDecoration(
-                        labelText: "Email",
-                        prefixIcon: Icon(Icons.email),
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) =>
-                          value!.isEmpty ? "Enter your email" : null,
-                    ),
-                    const SizedBox(height: 20),
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                        labelText: "Password",
-                        prefixIcon: Icon(Icons.lock),
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) =>
-                          value!.isEmpty ? "Enter your password" : null,
-                    ),
-                    const SizedBox(height: 30),
-                    authProvider.isLoading
-                        ? const CircularProgressIndicator()
-                        : ElevatedButton(
-                            onPressed: _login,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.deepPurple,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 40, vertical: 15),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text(
-                              "Login",
-                              style: TextStyle(
-                                  color: Colors.white, fontSize: 18),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
+      appBar: AppBar(title: const Text('Admin Login')),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            TextField(controller: emailController, decoration: const InputDecoration(labelText: 'Email')),
+            TextField(controller: passwordController, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
+            const SizedBox(height: 20),
+            ElevatedButton(onPressed: login, child: const Text('Login')),
+          ],
+        ),
       ),
     );
   }

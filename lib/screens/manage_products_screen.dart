@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/product_provider.dart';
 import '../models/product_model.dart';
-import 'add_product_screen.dart';
 
 class ManageProductsScreen extends StatelessWidget {
   const ManageProductsScreen({super.key});
@@ -15,19 +14,6 @@ class ManageProductsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Manage Products'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const AddProductScreen(),
-                ),
-              );
-            },
-          ),
-        ],
       ),
       body: products.isEmpty
           ? const Center(child: Text('No products available.'))
@@ -39,26 +25,20 @@ class ManageProductsScreen extends StatelessWidget {
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: ListTile(
                     leading: Image.network(
-                      product.imagePath,
+                      product.imageUrl,
                       width: 50,
                       height: 50,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported),
                     ),
                     title: Text(product.name),
-                    subtitle: Text('₹${product.price} | Qty: ${product.quantity} | ${product.category}'),
+                    subtitle: Text('₹${product.price.toStringAsFixed(2)}'),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
                           icon: const Icon(Icons.edit, color: Colors.blue),
                           onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => AddProductScreen(product: product),
-                              ),
-                            );
+                            // TODO: Navigate to edit screen
                           },
                         ),
                         IconButton(
@@ -93,7 +73,7 @@ class ManageProductsScreen extends StatelessWidget {
               await provider.deleteProduct(productId);
               Navigator.of(ctx).pop();
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Product deleted successfully')),
+                const SnackBar(content: Text('Product deleted')),
               );
             },
             child: const Text('Delete'),
