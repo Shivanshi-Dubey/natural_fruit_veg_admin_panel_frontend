@@ -13,21 +13,15 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  bool _isInit = true;
-
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_isInit) {
-      // Fetch products and orders only once
-      final productProvider = Provider.of<ProductProvider>(context, listen: false);
-      final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+  void initState() {
+    super.initState();
 
-      productProvider.fetchProducts();
-      orderProvider.fetchOrders();
-
-      _isInit = false;
-    }
+    // ✅ Fetch data only once when the screen is opened
+    Future.microtask(() {
+      Provider.of<ProductProvider>(context, listen: false).fetchProducts();
+      Provider.of<OrderProvider>(context, listen: false).fetchOrders();
+    });
   }
 
   int getTotalOrders(List<Order> orders) => orders.length;
@@ -64,82 +58,66 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final totalRevenue = getTotalRevenue(allOrders);
     final topProducts = getTopSellingProducts(allOrders);
 
-    // Show loading if either provider is still fetching data
-    if (productProvider.isLoading || orderProvider.isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    // Show error if any
-    if (productProvider.errorMessage != null || orderProvider.errorMessage != null) {
-      return Scaffold(
-        body: Center(
-          child: Text(
-            productProvider.errorMessage ?? orderProvider.errorMessage ?? 'Something went wrong',
-            style: const TextStyle(fontSize: 16, color: Colors.red),
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
         backgroundColor: Colors.green.shade700,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListView(
-          children: [
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 1,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 3,
-              children: [
-                DashboardCard(
-                  title: 'Total Products',
-                  value: getTotalProducts(allProducts).toString(),
-                  icon: Icons.inventory_2_outlined,
-                  color: Colors.orange.shade100,
-                ),
-                DashboardCard(
-                  title: 'Total Orders',
-                  value: getTotalOrders(allOrders).toString(),
-                  icon: Icons.shopping_cart_checkout_rounded,
-                  color: Colors.blue.shade100,
-                ),
-                DashboardCard(
-                  title: 'Revenue',
-                  value: '₹${totalRevenue.toStringAsFixed(2)}',
-                  icon: Icons.currency_rupee_rounded,
-                  color: Colors.green.shade100,
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Top Selling Products',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            topProducts.isEmpty
-                ? const Text('No top-selling products yet.')
-                : Column(
-                    children: topProducts.map(
-                      (entry) => ListTile(
-                        leading: const Icon(Icons.local_grocery_store),
-                        title: Text(entry.key),
-                        trailing: Text('Sold: ${entry.value}'),
+      body: productProvider.isLoading || orderProvider.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ListView(
+                children: [
+                  GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount:
+                        MediaQuery.of(context).size.width > 600 ? 3 : 1,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 3,
+                    children: [
+                      DashboardCard(
+                        title: 'Total Products',
+                        value: getTotalProducts(allProducts).toString(),
+                        icon: Icons.inventory_2_outlined,
+                        color: Colors.orange.shade100,
                       ),
-                    ).toList(),
+                      DashboardCard(
+                        title: 'Total Orders',
+                        value: getTotalOrders(allOrders).toString(),
+                        icon: Icons.shopping_cart_checkout_rounded,
+                        color: Colors.blue.shade100,
+                      ),
+                      DashboardCard(
+                        title: 'Revenue',
+                        value: '₹${totalRevenue.toStringAsFixed(2)}',
+                        icon: Icons.currency_rupee_rounded,
+                        color: Colors.green.shade100,
+                      ),
+                    ],
                   ),
-          ],
-        ),
-      ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Top Selling Products',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  topProducts.isEmpty
+                      ? const Text('No top-selling products yet.')
+                      : Column(
+                          children: topProducts.map(
+                            (entry) => ListTile(
+                              leading: const Icon(Icons.local_grocery_store),
+                              title: Text(entry.key),
+                              trailing: Text('Sold: ${entry.value}'),
+                            ),
+                          ).toList(),
+                        ),
+                ],
+              ),
+            ),
     );
   }
 }
@@ -176,12 +154,14 @@ class DashboardCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     value,
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
