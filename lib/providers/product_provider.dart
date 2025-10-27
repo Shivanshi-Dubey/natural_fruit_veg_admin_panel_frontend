@@ -14,27 +14,33 @@ class ProductProvider with ChangeNotifier {
 
   final String baseUrl = 'https://natural-fruit-veg-backend.onrender.com/api/products'; // Backend URL
 
-  Future<void> fetchProducts() async {
-    _isLoading = true;
-    _errorMessage = null;
-    // ✅ Do not notifyListeners here to avoid build-time calls
+Future<void> fetchProducts() async {
+  _isLoading = true;
+  _errorMessage = null;
 
-    try {
-      final response = await http.get(Uri.parse(baseUrl));
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        _products = data.map((e) => Product.fromJson(e)).toList();
-        _errorMessage = null;
-      } else {
-        _errorMessage = 'Failed to load products';
-      }
-    } catch (e) {
-      _errorMessage = 'Error: $e';
+  try {
+    final response = await http.get(Uri.parse(baseUrl));
+
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body);
+
+      // ✅ Adjust based on backend response format
+      final List<dynamic> data =
+          body is List ? body : body['products'] ?? body['data'] ?? [];
+
+      _products = data.map((e) => Product.fromJson(e)).toList();
+      _errorMessage = null;
+    } else {
+      _errorMessage = 'Failed to load products (${response.statusCode})';
     }
-
-    _isLoading = false;
-    notifyListeners(); // ✅ Notify only after data is fetched
+  } catch (e) {
+    _errorMessage = 'Error: $e';
   }
+
+  _isLoading = false;
+  notifyListeners();
+}
+
 
   Future<void> addProduct(Product product) async {
     try {
