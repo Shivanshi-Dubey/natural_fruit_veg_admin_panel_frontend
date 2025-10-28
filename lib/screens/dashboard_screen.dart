@@ -31,6 +31,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return orders.fold(0.0, (sum, order) => sum + order.totalPrice);
   }
 
+  // Total purchase quantity across all orders
+  int getTotalPurchasedQuantity(List<Order> orders) {
+    int totalQty = 0;
+    for (final order in orders) {
+      for (final product in order.products) {
+        totalQty += product.quantity;
+      }
+    }
+    return totalQty;
+  }
+
   List<MapEntry<String, int>> getTopSellingProducts(List<Order> orders) {
     final Map<String, int> productCountMap = {};
 
@@ -56,6 +67,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final allOrders = orderProvider.orders;
 
     final totalRevenue = getTotalRevenue(allOrders);
+    final totalPurchasedQty = getTotalPurchasedQuantity(allOrders);
     final topProducts = getTopSellingProducts(allOrders);
 
     final isLoading = productProvider.isLoading || orderProvider.isLoading;
@@ -96,10 +108,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             color: Colors.blue.shade100,
                           ),
                           DashboardCard(
-                            title: 'Revenue',
+                            title: 'Total Sale',
                             value: '₹${totalRevenue.toStringAsFixed(2)}',
                             icon: Icons.currency_rupee_rounded,
                             color: Colors.green.shade100,
+                          ),
+                          // Total Purchase (sum of quantities)
+                          DashboardCard(
+                            title: 'Total Purchase',
+                            value: totalPurchasedQty.toString(),
+                            icon: Icons.shopping_bag_outlined,
+                            color: Colors.purple.shade100,
                           ),
                         ],
                       ),
