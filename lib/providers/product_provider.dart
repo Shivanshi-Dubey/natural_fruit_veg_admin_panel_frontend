@@ -20,6 +20,7 @@ Future<void> fetchProducts() async {
 
   try {
     final response = await http.get(Uri.parse(baseUrl));
+    print('📥 fetchProducts response: ${response.statusCode} ${response.body}');
 
     if (response.statusCode == 200) {
       final body = jsonDecode(response.body);
@@ -31,10 +32,11 @@ Future<void> fetchProducts() async {
       _products = data.map((e) => Product.fromJson(e)).toList();
       _errorMessage = null;
     } else {
-      _errorMessage = 'Failed to load products (${response.statusCode})';
+      _errorMessage = 'Failed to load products (status: ${response.statusCode}, body: ${response.body})';
     }
   } catch (e) {
-    _errorMessage = 'Error: $e';
+    _errorMessage = 'Error: ${e.toString()}';
+    print('❌ fetchProducts error: ${e.toString()}');
   }
 
   _isLoading = false;

@@ -59,6 +59,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final topProducts = getTopSellingProducts(allOrders);
 
     final isLoading = productProvider.isLoading || orderProvider.isLoading;
+    final productError = productProvider.errorMessage;
 
     return Scaffold(
       appBar: AppBar(
@@ -67,55 +68,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ListView(
-                children: [
-                  GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount:
-                        MediaQuery.of(context).size.width > 600 ? 3 : 1,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 3,
+          : productError != null
+              ? Center(child: Text(productError, style: const TextStyle(color: Colors.red), textAlign: TextAlign.center))
+              : Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: ListView(
                     children: [
-                      DashboardCard(
-                        title: 'Total Products',
-                        value: getTotalProducts(allProducts).toString(),
-                        icon: Icons.inventory_2_outlined,
-                        color: Colors.orange.shade100,
+                      GridView.count(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisCount:
+                            MediaQuery.of(context).size.width > 600 ? 3 : 1,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        childAspectRatio: 3,
+                        children: [
+                          DashboardCard(
+                            title: 'Total Products',
+                            value: getTotalProducts(allProducts).toString(),
+                            icon: Icons.inventory_2_outlined,
+                            color: Colors.orange.shade100,
+                          ),
+                          DashboardCard(
+                            title: 'Total Orders',
+                            value: getTotalOrders(allOrders).toString(),
+                            icon: Icons.shopping_cart_checkout_rounded,
+                            color: Colors.blue.shade100,
+                          ),
+                          DashboardCard(
+                            title: 'Revenue',
+                            value: '₹${totalRevenue.toStringAsFixed(2)}',
+                            icon: Icons.currency_rupee_rounded,
+                            color: Colors.green.shade100,
+                          ),
+                        ],
                       ),
-                      DashboardCard(
-                        title: 'Total Orders',
-                        value: getTotalOrders(allOrders).toString(),
-                        icon: Icons.shopping_cart_checkout_rounded,
-                        color: Colors.blue.shade100,
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Top Selling Products',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
-                      DashboardCard(
-                        title: 'Revenue',
-                        value: '₹${totalRevenue.toStringAsFixed(2)}',
-                        icon: Icons.currency_rupee_rounded,
-                        color: Colors.green.shade100,
+                      const SizedBox(height: 8),
+                      ...topProducts.map(
+                        (entry) => ListTile(
+                          leading: const Icon(Icons.local_grocery_store),
+                          title: Text(entry.key),
+                          trailing: Text('Sold: ${entry.value}'),
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Top Selling Products',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  ...topProducts.map(
-                    (entry) => ListTile(
-                      leading: const Icon(Icons.local_grocery_store),
-                      title: Text(entry.key),
-                      trailing: Text('Sold: ${entry.value}'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                ),
     );
   }
 }
