@@ -21,6 +21,7 @@ class ManageProductsScreen extends StatelessWidget {
               itemCount: products.length,
               itemBuilder: (ctx, index) {
                 final product = products[index];
+                final isOutOfStock = product.stock <= 0;
                 return Card(
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: ListTile(
@@ -30,11 +31,42 @@ class ManageProductsScreen extends StatelessWidget {
                       height: 50,
                       fit: BoxFit.cover,
                     ),
-                    title: Text(product.name),
+                    title: Row(
+                      children: [
+                        Expanded(child: Text(product.name)),
+                        if (isOutOfStock)
+                          const Padding(
+                            padding: EdgeInsets.only(left: 8.0),
+                            child: Chip(label: Text('Out of stock'), backgroundColor: Colors.redAccent),
+                          ),
+                      ],
+                    ),
                     subtitle: Text('₹${product.price.toStringAsFixed(2)}'),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // Stock toggle
+                        Row(
+                          children: [
+                            const Text('In stock'),
+                            Switch(
+                              value: !isOutOfStock,
+                              onChanged: (value) async {
+                                final newStock = value ? (product.stock > 0 ? product.stock : 1) : 0;
+                                await productProvider.updateProduct(
+                                  product.copyWith(stock: newStock),
+                                );
+                                if (productProvider.errorMessage != null) {
+                                  // show error
+                                  // ignore: use_build_context_synchronously
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(productProvider.errorMessage!)),
+                                  );
+                                }
+                              },
+                            ),
+                          ],
+                        ),
                         IconButton(
                           icon: const Icon(Icons.edit, color: Colors.blue),
                           onPressed: () {
