@@ -23,28 +23,39 @@ class Product {
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
-      id: json['id'],
-      name: json['name'],
-      description: json['description'],
-      price: (json['price'] as num).toDouble(),
-      discountPrice: json['discountPrice'] != null
-          ? (json['discountPrice'] as num).toDouble()
-          : null,
-      imageUrl: json['imageUrl'],
-      category: json['category'],
-      quantity: json['quantity'],
-      stock: json['stock'], // ✅ Added
+      id: (json['_id'] ?? json['id'] ?? '').toString(),
+      name: (json['name'] ?? '').toString(),
+      description: (json['description'] ?? '').toString(),
+      price: (json['price'] is num)
+          ? (json['price'] as num).toDouble()
+          : double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
+      discountPrice: json['discountPrice'] == null
+          ? null
+          : (json['discountPrice'] is num)
+              ? (json['discountPrice'] as num).toDouble()
+              : double.tryParse(json['discountPrice']?.toString() ?? ''),
+      imageUrl: (json['imageUrl'] ?? json['imagePath'] ?? '').toString(),
+      category: (json['category'] ?? '').toString(),
+      quantity: (json['quantity'] is int)
+          ? json['quantity'] as int
+          : int.tryParse(json['quantity']?.toString() ?? '0') ?? 0,
+      stock: (json['stock'] is int)
+          ? json['stock'] as int
+          : int.tryParse(json['stock']?.toString() ?? '0') ?? 0, // ✅ Added
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
+      // Prefer backend-friendly keys; include both for compatibility
+      '_id': id,
       'id': id,
       'name': name,
       'description': description,
       'price': price,
       'discountPrice': discountPrice,
       'imageUrl': imageUrl,
+      'imagePath': imageUrl,
       'category': category,
       'quantity': quantity,
       'stock': stock, // ✅ Added
