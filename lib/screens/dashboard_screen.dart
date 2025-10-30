@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../models/product_model.dart';
 import '../models/order_model.dart';
 import '../providers/product_provider.dart';
@@ -16,7 +17,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch latest data when dashboard opens
     Future.microtask(() {
       Provider.of<ProductProvider>(context, listen: false).fetchProducts();
       Provider.of<OrderProvider>(context, listen: false).fetchOrders();
@@ -24,14 +24,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   int getTotalOrders(List<Order> orders) => orders.length;
-
   int getTotalProducts(List<Product> products) => products.length;
-
-  double getTotalRevenue(List<Order> orders) {
-    return orders.fold(0.0, (sum, order) => sum + order.totalPrice);
-  }
-
-  // Total purchase quantity across all orders
+  double getTotalRevenue(List<Order> orders) =>
+      orders.fold(0.0, (sum, order) => sum + order.totalPrice);
   int getTotalPurchasedQuantity(List<Order> orders) {
     int totalQty = 0;
     for (final order in orders) {
@@ -44,17 +39,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   List<MapEntry<String, int>> getTopSellingProducts(List<Order> orders) {
     final Map<String, int> productCountMap = {};
-
     for (final order in orders) {
       for (final product in order.products) {
         productCountMap[product.name] =
             (productCountMap[product.name] ?? 0) + product.quantity;
       }
     }
-
     final sortedEntries = productCountMap.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-
     return sortedEntries.take(3).toList();
   }
 
@@ -74,6 +66,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final productError = productProvider.errorMessage;
 
     return Scaffold(
+      drawer: const AdminDrawer(),
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
         backgroundColor: Colors.green.shade700,
@@ -81,16 +74,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : productError != null
-              ? Center(child: Text(productError, style: const TextStyle(color: Colors.red), textAlign: TextAlign.center))
+              ? Center(
+                  child: Text(
+                    productError,
+                    style: const TextStyle(color: Colors.red),
+                    textAlign: TextAlign.center,
+                  ),
+                )
               : Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: ListView(
                     children: [
+                      // Summary Cards
                       GridView.count(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         crossAxisCount:
-                            MediaQuery.of(context).size.width > 600 ? 3 : 1,
+                            MediaQuery.of(context).size.width > 900 ? 4 : 2,
                         crossAxisSpacing: 16,
                         mainAxisSpacing: 16,
                         childAspectRatio: 3,
@@ -113,7 +113,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             icon: Icons.currency_rupee_rounded,
                             color: Colors.green.shade100,
                           ),
-                          // Total Purchase (sum of quantities)
                           DashboardCard(
                             title: 'Total Purchase',
                             value: totalPurchasedQty.toString(),
@@ -122,10 +121,78 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 30),
+
+                      // Sales Overview Chart
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.3),
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Sales Overview",
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              height: 200,
+                              child: LineChart(
+                                LineChartData(
+                                  titlesData: FlTitlesData(
+                                    leftTitles: AxisTitles(
+                                        sideTitles:
+                                            SideTitles(showTitles: true)),
+                                    bottomTitles: AxisTitles(
+                                        sideTitles:
+                                            SideTitles(showTitles: false)),
+                                  ),
+                                  gridData:
+                                      FlGridData(show: true, drawVerticalLine: false),
+                                  borderData: FlBorderData(show: false),
+                                  lineBarsData: [
+                                    LineChartBarData(
+                                      isCurved: true,
+                                      color: Colors.green.shade700,
+                                      spots: [
+                                        const FlSpot(0, 0),
+                                        const FlSpot(1, 1),
+                                        const FlSpot(2, 1.8),
+                                        const FlSpot(3, 2.5),
+                                        const FlSpot(4, 3),
+                                        const FlSpot(5, 4),
+                                      ],
+                                      belowBarData: BarAreaData(
+                                        show: true,
+                                        color: Colors.green.shade100,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 30),
+
+                      // Top Selling Products
                       const Text(
                         'Top Selling Products',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style:
+                            TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
                       ...topProducts.map(
@@ -161,34 +228,67 @@ class DashboardCard extends StatelessWidget {
     return Card(
       color: color,
       elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(20),
         child: Row(
           children: [
-            Icon(icon, size: 30, color: Colors.black54),
+            Icon(icon, size: 40, color: Colors.black54),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style:
-                        const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
+                  Text(title,
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w500)),
                   const SizedBox(height: 4),
-                  Text(
-                    value,
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
+                  Text(value,
+                      style: const TextStyle(
+                          fontSize: 22, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class AdminDrawer extends StatelessWidget {
+  const AdminDrawer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          DrawerHeader(
+            decoration: BoxDecoration(color: Colors.green.shade700),
+            child: const Text(
+              'Admin Panel',
+              style: TextStyle(color: Colors.white, fontSize: 20),
+            ),
+          ),
+          _drawerItem(context, Icons.dashboard, 'Dashboard', () {}),
+          _drawerItem(context, Icons.inventory_2, 'Products', () {}),
+          _drawerItem(context, Icons.shopping_cart, 'Orders', () {}),
+          _drawerItem(context, Icons.people, 'Customers', () {}),
+          _drawerItem(context, Icons.bar_chart, 'Reports', () {}),
+          _drawerItem(context, Icons.settings, 'Settings', () {}),
+        ],
+      ),
+    );
+  }
+
+  Widget _drawerItem(
+      BuildContext context, IconData icon, String title, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.green.shade700),
+      title: Text(title),
+      onTap: onTap,
     );
   }
 }
