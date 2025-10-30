@@ -1,99 +1,68 @@
 import 'package:flutter/material.dart';
-import 'product_list_screen.dart';
-import 'orders_screen.dart';
+import 'dashboard_screen.dart';
+import 'manage_products_screen.dart';
+import 'manage_orders_screen.dart';
 import 'add_product_screen.dart';
 
-class AdminHomeScreen extends StatelessWidget {
+class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
+
+  @override
+  State<AdminHomeScreen> createState() => _AdminHomeScreenState();
+}
+
+class _AdminHomeScreenState extends State<AdminHomeScreen> {
+  int _selectedIndex = 0;
+
+  final List<Widget> _screens = const [
+    DashboardScreen(),
+    ManageProductsScreen(),
+    ManageOrdersScreen(),
+    AddProductScreen(),
+  ];
+
+  final List<String> _titles = const [
+    'Dashboard',
+    'Products',
+    'Orders',
+    'Add Product',
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin Dashboard'),
-        centerTitle: true,
+        title: Text(_titles[_selectedIndex]),
+        backgroundColor: Colors.green.shade700,
+        elevation: 0,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: GridView.count(
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          children: [
-            _buildDashboardCard(
-              context,
-              title: 'Manage Products',
-              icon: Icons.shopping_bag,
-              color: Colors.orange,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ProductListScreen(),
-                  ),
-                );
-              },
-            ),
-            _buildDashboardCard(
-              context,
-              title: 'Manage Orders',
-              icon: Icons.receipt_long,
-              color: Colors.blue,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const OrdersScreen(),
-                  ),
-                );
-              },
-            ),
-            _buildDashboardCard(
-              context,
-              title: 'Add Product',
-              icon: Icons.add_box,
-              color: Colors.green,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const AddProductScreen(),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+      body: _screens[_selectedIndex],
 
-  Widget _buildDashboardCard(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Card(
-        elevation: 4,
-        color: color.withOpacity(0.8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 50, color: Colors.white),
-              const SizedBox(height: 10),
-              Text(
-                title,
-                style: const TextStyle(fontSize: 16, color: Colors.white),
-              ),
-            ],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        selectedItemColor: Colors.green.shade700,
+        unselectedItemColor: Colors.grey,
+        onTap: (index) {
+          setState(() => _selectedIndex = index);
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard),
+            label: 'Dashboard',
           ),
-        ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.inventory_2),
+            label: 'Products',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_cart),
+            label: 'Orders',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.add_box),
+            label: 'Add Product',
+          ),
+        ],
       ),
     );
   }

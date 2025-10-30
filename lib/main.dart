@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+// Providers
 import 'providers/product_provider.dart';
 import 'providers/order_provider.dart';
 
+// Screens
 import 'screens/admin_home_screen.dart';
 import 'screens/manage_products_screen.dart';
 import 'screens/manage_orders_screen.dart';
@@ -26,18 +28,22 @@ class AdminApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'Admin Panel - Natural Fruits & Vegetables',
-        theme: ThemeData(primarySwatch: Colors.green),
+        theme: ThemeData(
+          primarySwatch: Colors.green,
+          scaffoldBackgroundColor: Colors.grey[100],
+        ),
         debugShowCheckedModeBanner: false,
-        initialRoute: '/',
+
+        // 👇 Set AdminHomeScreen as the main entry point
+        home: const AdminHomeScreen(),
+
         routes: {
-          '/': (context) => const AdminHomeScreen(),
+          '/dashboard': (context) => const DashboardScreen(),
           '/manage-products': (context) => const ManageProductsScreen(),
           '/manage-orders': (context) => const ManageOrdersScreen(),
           '/add-product': (context) => const AddProductScreen(),
-          '/dashboard-screen': (context) => const DashboardScreen(),
         },
       ),
     );
   }
 }
-
