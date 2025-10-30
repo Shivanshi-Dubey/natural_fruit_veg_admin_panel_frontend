@@ -17,44 +17,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() async {
-      final productProvider =
-          Provider.of<ProductProvider>(context, listen: false);
-      final orderProvider =
-          Provider.of<OrderProvider>(context, listen: false);
-
-      await Future.wait([
-        productProvider.fetchProducts(),
-        orderProvider.fetchOrders(),
-      ]);
+    Future.microtask(() {
+      Provider.of<ProductProvider>(context, listen: false).fetchProducts();
+      Provider.of<OrderProvider>(context, listen: false).fetchOrders();
     });
   }
 
-  // --- Calculation helpers ---
   int getTotalOrders(List<Order> orders) => orders.length;
   int getTotalProducts(List<Product> products) => products.length;
   double getTotalRevenue(List<Order> orders) =>
-      orders.fold(0.0, (sum, o) => sum + (o.totalPrice));
+      orders.fold(0.0, (sum, order) => sum + order.totalPrice);
   int getTotalPurchasedQuantity(List<Order> orders) {
     int totalQty = 0;
-    for (final o in orders) {
-      for (final p in o.products) {
-        totalQty += p.quantity;
+    for (final order in orders) {
+      for (final product in order.products) {
+        totalQty += product.quantity;
       }
     }
     return totalQty;
   }
 
   List<MapEntry<String, int>> getTopSellingProducts(List<Order> orders) {
-    final Map<String, int> countMap = {};
-    for (final o in orders) {
-      for (final p in o.products) {
-        countMap[p.name] = (countMap[p.name] ?? 0) + p.quantity;
+    final Map<String, int> productCountMap = {};
+    for (final order in orders) {
+      for (final product in order.products) {
+        productCountMap[product.name] =
+            (productCountMap[product.name] ?? 0) + product.quantity;
       }
     }
-    final sorted = countMap.entries.toList()
+    final sortedEntries = productCountMap.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-    return sorted.take(5).toList();
+    return sortedEntries.take(3).toList();
   }
 
   @override
@@ -62,14 +55,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final productProvider = Provider.of<ProductProvider>(context);
     final orderProvider = Provider.of<OrderProvider>(context);
 
-    final products = productProvider.products;
-    final orders = orderProvider.orders;
+    final allProducts = productProvider.products;
+    final allOrders = orderProvider.orders;
 
-    final totalRevenue = getTotalRevenue(orders);
-    final totalPurchase = getTotalPurchasedQuantity(orders);
-    final topProducts = getTopSellingProducts(orders);
+    final totalRevenue = getTotalRevenue(allOrders);
+    final totalPurchasedQty = getTotalPurchasedQuantity(allOrders);
+    final topProducts = getTopSellingProducts(allOrders);
 
     final isLoading = productProvider.isLoading || orderProvider.isLoading;
+    final productError = productProvider.errorMessage;
 
     return Scaffold(
       drawer: const AdminDrawer(),
@@ -79,23 +73,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : (productProvider.errorMessage != null ||
-                  orderProvider.errorMessage != null)
+          : productError != null
               ? Center(
                   child: Text(
-                    productProvider.errorMessage ??
-                        orderProvider.errorMessage ??
-                        "Unknown error",
+                    productError,
                     style: const TextStyle(color: Colors.red),
+                    textAlign: TextAlign.center,
                   ),
                 )
-              : RefreshIndicator(
-                  onRefresh: () async {
-                    await productProvider.fetchProducts();
-                    await orderProvider.fetchOrders();
-                  },
+              : Padding(
+                  padding: const EdgeInsets.all(16.0),
                   child: ListView(
-                    padding: const EdgeInsets.all(16),
                     children: [
                       // Summary Cards
                       GridView.count(
@@ -109,13 +97,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           DashboardCard(
                             title: 'Total Products',
-                            value: getTotalProducts(products).toString(),
+                            value: getTotalProducts(allProducts).toString(),
                             icon: Icons.inventory_2_outlined,
                             color: Colors.orange.shade100,
                           ),
                           DashboardCard(
                             title: 'Total Orders',
-                            value: getTotalOrders(orders).toString(),
+                            value: getTotalOrders(allOrders).toString(),
                             icon: Icons.shopping_cart_checkout_rounded,
                             color: Colors.blue.shade100,
                           ),
@@ -127,13 +115,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                           DashboardCard(
                             title: 'Total Purchase',
-                            value: totalPurchase.toString(),
+                            value: totalPurchasedQty.toString(),
                             icon: Icons.shopping_bag_outlined,
                             color: Colors.purple.shade100,
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 30),
 
                       // Sales Overview Chart
@@ -171,19 +158,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         sideTitles:
                                             SideTitles(showTitles: false)),
                                   ),
-                                  gridData: FlGridData(
-                                      show: true, drawVerticalLine: false),
+                                  gridData:
+                                      FlGridData(show: true, drawVerticalLine: false),
                                   borderData: FlBorderData(show: false),
                                   lineBarsData: [
                                     LineChartBarData(
                                       isCurved: true,
                                       color: Colors.green.shade700,
                                       spots: [
-                                        for (int i = 0; i < orders.length; i++)
-                                          FlSpot(
-                                            i.toDouble(),
-                                            (orders[i].totalPrice).toDouble(),
-                                          ),
+                                        const FlSpot(0, 0),
+                                        const FlSpot(1, 1),
+                                        const FlSpot(2, 1.8),
+                                        const FlSpot(3, 2.5),
+                                        const FlSpot(4, 3),
+                                        const FlSpot(5, 4),
                                       ],
                                       belowBarData: BarAreaData(
                                         show: true,
@@ -203,12 +191,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       // Top Selling Products
                       const Text(
                         'Top Selling Products',
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold),
+                        style:
+                            TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
-                      if (topProducts.isEmpty)
-                        const Text("No sales data available"),
                       ...topProducts.map(
                         (entry) => ListTile(
                           leading: const Icon(Icons.local_grocery_store),
