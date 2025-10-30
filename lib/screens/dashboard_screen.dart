@@ -17,16 +17,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      Provider.of<ProductProvider>(context, listen: false).fetchProducts();
-      Provider.of<OrderProvider>(context, listen: false).fetchOrders();
-    });
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final productProvider = Provider.of<ProductProvider>(context, listen: false);
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    await productProvider.fetchProducts();
+    await orderProvider.fetchOrders();
   }
 
   int getTotalOrders(List<Order> orders) => orders.length;
+
   int getTotalProducts(List<Product> products) => products.length;
+
   double getTotalRevenue(List<Order> orders) =>
       orders.fold(0.0, (sum, order) => sum + order.totalPrice);
+
   int getTotalPurchasedQuantity(List<Order> orders) {
     int totalQty = 0;
     for (final order in orders) {
@@ -63,13 +70,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final topProducts = getTopSellingProducts(allOrders);
 
     final isLoading = productProvider.isLoading || orderProvider.isLoading;
-    final productError = productProvider.errorMessage;
+    final productError = productProvider.errorMessage ?? orderProvider.errorMessage;
 
     return Scaffold(
       drawer: const AdminDrawer(),
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
         backgroundColor: Colors.green.shade700,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Reload Data',
+            onPressed: () async {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Refreshing data...')),
+              );
+              await _loadData();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Dashboard updated successfully')),
+              );
+            },
+          ),
+        ],
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -85,7 +107,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   padding: const EdgeInsets.all(16.0),
                   child: ListView(
                     children: [
-                      // Summary Cards
+                      // ---- Summary Cards ----
                       GridView.count(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
@@ -100,12 +122,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             value: getTotalProducts(allProducts).toString(),
                             icon: Icons.inventory_2_outlined,
                             color: Colors.orange.shade100,
+                            onTap: () => Navigator.pushNamed(context, '/manage-products'),
                           ),
                           DashboardCard(
                             title: 'Total Orders',
                             value: getTotalOrders(allOrders).toString(),
                             icon: Icons.shopping_cart_checkout_rounded,
                             color: Colors.blue.shade100,
+                            onTap: () => Navigator.pushNamed(context, '/manage-orders'),
                           ),
                           DashboardCard(
                             title: 'Total Sale',
@@ -123,7 +147,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       const SizedBox(height: 30),
 
-                      // Sales Overview Chart
+                      // ---- Sales Overview Chart ----
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -156,23 +180,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             SideTitles(showTitles: true)),
                                     bottomTitles: AxisTitles(
                                         sideTitles:
-                                            SideTitles(showTitles: false)),
+                                            SideTitles(showTitles: true)),
                                   ),
-                                  gridData:
-                                      FlGridData(show: true, drawVerticalLine: false),
+                                  gridData: FlGridData(
+                                      show: true, drawVerticalLine: false),
                                   borderData: FlBorderData(show: false),
                                   lineBarsData: [
                                     LineChartBarData(
                                       isCurved: true,
                                       color: Colors.green.shade700,
-                                      spots: [
-                                        const FlSpot(0, 0),
-                                        const FlSpot(1, 1),
-                                        const FlSpot(2, 1.8),
-                                        const FlSpot(3, 2.5),
-                                        const FlSpot(4, 3),
-                                        const FlSpot(5, 4),
-                                      ],
+                                      spots: allOrders.isEmpty
+                                          ? [const FlSpot(0, 0)]
+                                          : allOrders
+                                              .asMap()
+                                              .entries
+                                              .map((entry) => FlSpot(
+                                                    (entry.key + 1).toDouble(),
+                                                    entry.value.totalPrice
+                                                        .toDouble(),
+                                                  ))
+                                              .toList(),
                                       belowBarData: BarAreaData(
                                         show: true,
                                         color: Colors.green.shade100,
@@ -188,20 +215,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                       const SizedBox(height: 30),
 
-                      // Top Selling Products
+                      // ---- Top Selling Products ----
                       const Text(
                         'Top Selling Products',
                         style:
                             TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
-                      ...topProducts.map(
-                        (entry) => ListTile(
-                          leading: const Icon(Icons.local_grocery_store),
-                          title: Text(entry.key),
-                          trailing: Text('Sold: ${entry.value}'),
+                      if (topProducts.isEmpty)
+                        const Center(
+                            child: Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Text("No product sales data available."),
+                        ))
+                      else
+                        ...topProducts.map(
+                          (entry) => ListTile(
+                            leading: const Icon(Icons.local_grocery_store),
+                            title: Text(entry.key),
+                            trailing: Text('Sold: ${entry.value}'),
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -214,6 +248,7 @@ class DashboardCard extends StatelessWidget {
   final String value;
   final IconData icon;
   final Color color;
+  final VoidCallback? onTap;
 
   const DashboardCard({
     super.key,
@@ -221,35 +256,39 @@ class DashboardCard extends StatelessWidget {
     required this.value,
     required this.icon,
     required this.color,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: color,
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Icon(icon, size: 40, color: Colors.black54),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w500)),
-                  const SizedBox(height: 4),
-                  Text(value,
-                      style: const TextStyle(
-                          fontSize: 22, fontWeight: FontWeight.bold)),
-                ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Card(
+        color: color,
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Icon(icon, size: 40, color: Colors.black54),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 4),
+                    Text(value,
+                        style: const TextStyle(
+                            fontSize: 22, fontWeight: FontWeight.bold)),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -272,9 +311,15 @@ class AdminDrawer extends StatelessWidget {
               style: TextStyle(color: Colors.white, fontSize: 20),
             ),
           ),
-          _drawerItem(context, Icons.dashboard, 'Dashboard', () {}),
-          _drawerItem(context, Icons.inventory_2, 'Products', () {}),
-          _drawerItem(context, Icons.shopping_cart, 'Orders', () {}),
+          _drawerItem(context, Icons.dashboard, 'Dashboard', () {
+            Navigator.pushReplacementNamed(context, '/dashboardScreen');
+          }),
+          _drawerItem(context, Icons.inventory_2, 'Products', () {
+            Navigator.pushNamed(context, '/manage-products');
+          }),
+          _drawerItem(context, Icons.shopping_cart, 'Orders', () {
+            Navigator.pushNamed(context, '/manage-orders');
+          }),
           _drawerItem(context, Icons.people, 'Customers', () {}),
           _drawerItem(context, Icons.bar_chart, 'Reports', () {}),
           _drawerItem(context, Icons.settings, 'Settings', () {}),
