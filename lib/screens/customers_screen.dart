@@ -6,8 +6,17 @@ class CustomersScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Customers')),
-      body: const Center(child: Text('Customers Screen')),
+      appBar: AppBar(
+        title: const Text("Customers"),
+        backgroundColor: Colors.green.shade700,
+      ),
+      body: const Center(
+        child: Text(
+          "Customer List & Details Coming Soon!",
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+        ),
+      ),
     );
   }
 }
+
