@@ -5,6 +5,11 @@ import '../models/product_model.dart';
 import '../models/order_model.dart';
 import '../providers/product_provider.dart';
 import '../providers/order_provider.dart';
+import 'products_screen.dart';
+import 'orders_screen.dart';
+import 'customers_screen.dart';
+import 'reports_screen.dart';
+import 'settings_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -95,29 +100,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         mainAxisSpacing: 16,
                         childAspectRatio: 3,
                         children: [
-                          DashboardCard(
-                            title: 'Total Products',
-                            value: getTotalProducts(allProducts).toString(),
-                            icon: Icons.inventory_2_outlined,
-                            color: Colors.orange.shade100,
+                          InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ProductsScreen(),
+                                ),
+                              );
+                            },
+                            child: DashboardCard(
+                              title: 'Total Products',
+                              value: getTotalProducts(allProducts).toString(),
+                              icon: Icons.inventory_2_outlined,
+                              color: Colors.orange.shade100,
+                            ),
                           ),
-                          DashboardCard(
-                            title: 'Total Orders',
-                            value: getTotalOrders(allOrders).toString(),
-                            icon: Icons.shopping_cart_checkout_rounded,
-                            color: Colors.blue.shade100,
+                          InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const OrdersScreen(),
+                                ),
+                              );
+                            },
+                            child: DashboardCard(
+                              title: 'Total Orders',
+                              value: getTotalOrders(allOrders).toString(),
+                              icon: Icons.shopping_cart_checkout_rounded,
+                              color: Colors.blue.shade100,
+                            ),
                           ),
-                          DashboardCard(
-                            title: 'Total Sale',
-                            value: '₹${totalRevenue.toStringAsFixed(2)}',
-                            icon: Icons.currency_rupee_rounded,
-                            color: Colors.green.shade100,
+                          InkWell(
+                            onTap: () {}, // Future link to sales screen
+                            child: DashboardCard(
+                              title: 'Total Sale',
+                              value: '₹${totalRevenue.toStringAsFixed(2)}',
+                              icon: Icons.currency_rupee_rounded,
+                              color: Colors.green.shade100,
+                            ),
                           ),
-                          DashboardCard(
-                            title: 'Total Purchase',
-                            value: totalPurchasedQty.toString(),
-                            icon: Icons.shopping_bag_outlined,
-                            color: Colors.purple.shade100,
+                          InkWell(
+                            onTap: () {}, // Future link to purchase screen
+                            child: DashboardCard(
+                              title: 'Total Purchase',
+                              value: totalPurchasedQty.toString(),
+                              icon: Icons.shopping_bag_outlined,
+                              color: Colors.purple.shade100,
+                            ),
                           ),
                         ],
                       ),
@@ -152,26 +183,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 LineChartData(
                                   titlesData: FlTitlesData(
                                     leftTitles: AxisTitles(
-                                        sideTitles:
-                                            SideTitles(showTitles: true)),
+                                      sideTitles: SideTitles(showTitles: true),
+                                    ),
                                     bottomTitles: AxisTitles(
-                                        sideTitles:
-                                            SideTitles(showTitles: false)),
+                                      sideTitles: SideTitles(showTitles: false),
+                                    ),
                                   ),
-                                  gridData:
-                                      FlGridData(show: true, drawVerticalLine: false),
+                                  gridData: FlGridData(
+                                      show: true, drawVerticalLine: false),
                                   borderData: FlBorderData(show: false),
                                   lineBarsData: [
                                     LineChartBarData(
                                       isCurved: true,
                                       color: Colors.green.shade700,
-                                      spots: [
-                                        const FlSpot(0, 0),
-                                        const FlSpot(1, 1),
-                                        const FlSpot(2, 1.8),
-                                        const FlSpot(3, 2.5),
-                                        const FlSpot(4, 3),
-                                        const FlSpot(5, 4),
+                                      spots: const [
+                                        FlSpot(0, 0),
+                                        FlSpot(1, 1),
+                                        FlSpot(2, 1.8),
+                                        FlSpot(3, 2.5),
+                                        FlSpot(4, 3),
+                                        FlSpot(5, 4),
                                       ],
                                       belowBarData: BarAreaData(
                                         show: true,
@@ -185,14 +216,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ],
                         ),
                       ),
-
                       const SizedBox(height: 30),
 
                       // Top Selling Products
                       const Text(
                         'Top Selling Products',
-                        style:
-                            TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
                       ...topProducts.map(
@@ -272,12 +302,72 @@ class AdminDrawer extends StatelessWidget {
               style: TextStyle(color: Colors.white, fontSize: 20),
             ),
           ),
-          _drawerItem(context, Icons.dashboard, 'Dashboard', () {}),
-          _drawerItem(context, Icons.inventory_2, 'Products', () {}),
-          _drawerItem(context, Icons.shopping_cart, 'Orders', () {}),
-          _drawerItem(context, Icons.people, 'Customers', () {}),
-          _drawerItem(context, Icons.bar_chart, 'Reports', () {}),
-          _drawerItem(context, Icons.settings, 'Settings', () {}),
+          _drawerItem(
+            context,
+            Icons.dashboard,
+            'Dashboard',
+            () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const DashboardScreen()),
+              );
+            },
+          ),
+          _drawerItem(
+            context,
+            Icons.inventory_2,
+            'Products',
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProductsScreen()),
+              );
+            },
+          ),
+          _drawerItem(
+            context,
+            Icons.shopping_cart,
+            'Orders',
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const OrdersScreen()),
+              );
+            },
+          ),
+          _drawerItem(
+            context,
+            Icons.people,
+            'Customers',
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CustomersScreen()),
+              );
+            },
+          ),
+          _drawerItem(
+            context,
+            Icons.bar_chart,
+            'Reports',
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ReportsScreen()),
+              );
+            },
+          ),
+          _drawerItem(
+            context,
+            Icons.settings,
+            'Settings',
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
+          ),
         ],
       ),
     );
