@@ -12,7 +12,7 @@ class ProductProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  final String baseUrl = 'https://natural-fruit-veg-admin-panel-backend.onrender/api/products'; // Backend URL
+  final String baseUrl = 'https://natural-fruit-veg-admin-panel-backend.onrender.com/api/products'; // Backend URL
 
 Future<void> fetchProducts() async {
   _isLoading = true;
