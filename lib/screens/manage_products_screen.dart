@@ -1,116 +1,100 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/product_provider.dart';
 import '../models/product_model.dart';
+import '../providers/product_provider.dart';
+import 'add_product_screen.dart';
 
 class ManageProductsScreen extends StatelessWidget {
   const ManageProductsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final productProvider = Provider.of<ProductProvider>(context);
-    final products = productProvider.products;
+    final provider = Provider.of<ProductProvider>(context);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Manage Products'),
+        backgroundColor: Colors.green,
       ),
-      body: products.isEmpty
-          ? const Center(child: Text('No products available.'))
-          : ListView.builder(
-              itemCount: products.length,
-              itemBuilder: (ctx, index) {
-                final product = products[index];
-                final isOutOfStock = product.stock <= 0;
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: ListTile(
-                    leading: Image.network(
-                      product.imageUrl,
-                      width: 50,
-                      height: 50,
-                      fit: BoxFit.cover,
-                    ),
-                    title: Row(
-                      children: [
-                        Expanded(child: Text(product.name)),
-                        if (isOutOfStock)
-                          const Padding(
-                            padding: EdgeInsets.only(left: 8.0),
-                            child: Chip(label: Text('Out of stock'), backgroundColor: Colors.redAccent),
-                          ),
-                      ],
-                    ),
-                    subtitle: Text('₹${product.price.toStringAsFixed(2)}'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Stock toggle
-                        Row(
-                          children: [
-                            const Text('In stock'),
-                            Switch(
-                              value: !isOutOfStock,
-                              onChanged: (value) async {
-                                final newStock = value ? (product.stock > 0 ? product.stock : 1) : 0;
-                                await productProvider.updateProduct(
-                                  product.copyWith(stock: newStock),
-                                );
-                                if (productProvider.errorMessage != null) {
-                                  // show error
-                                  // ignore: use_build_context_synchronously
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(productProvider.errorMessage!)),
-                                  );
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.blue),
-                          onPressed: () {
-                            // TODO: Navigate to edit screen
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () {
-                            _showDeleteDialog(context, productProvider, product.id);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-    );
-  }
+      body: provider.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : provider.errorMessage != null
+              ? Center(child: Text(provider.errorMessage!))
+              : RefreshIndicator(
+                  onRefresh: () => provider.fetchProducts(),
+                  child: ListView.builder(
+                    itemCount: provider.products.length,
+                    itemBuilder: (context, index) {
+                      final product = provider.products[index];
+                      final isOutOfStock = product.quantity <= 0;
 
-  void _showDeleteDialog(BuildContext context, ProductProvider provider, String productId) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Product'),
-        content: const Text('Are you sure you want to delete this product?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () async {
-              await provider.deleteProduct(productId);
-              Navigator.of(ctx).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Product deleted')),
-              );
-            },
-            child: const Text('Delete'),
-          ),
-        ],
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        child: ListTile(
+                          leading: Image.network(
+                            product.imagePath.isNotEmpty
+                                ? product.imagePath
+                                : 'https://via.placeholder.com/80',
+                            width: 60,
+                            height: 60,
+                            fit: BoxFit.cover,
+                          ),
+                          title: Text(product.name),
+                          subtitle: Text(
+                            '₹${product.price.toStringAsFixed(2)} • ${product.category}\n'
+                            'Quantity: ${product.quantity}',
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Switch(
+                                value: !isOutOfStock,
+                                activeColor: Colors.green,
+                                onChanged: (value) async {
+                                  final newQty =
+                                      value ? (product.quantity > 0 ? product.quantity : 1) : 0;
+                                  final updatedProduct = product.copyWith(
+                                    quantity: newQty,
+                                  );
+                                  await provider.updateProduct(updatedProduct, context);
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.blue),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          AddProductScreen(product: product),
+                                    ),
+                                  );
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () async {
+                                  await provider.deleteProduct(product.id!, context);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddProductScreen()),
+          );
+        },
+        backgroundColor: Colors.green,
+        child: const Icon(Icons.add),
       ),
     );
   }

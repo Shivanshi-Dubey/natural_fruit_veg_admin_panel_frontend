@@ -105,13 +105,14 @@ class ProductTile extends StatelessWidget {
         trailing: PopupMenuButton<String>(
           onSelected: (value) async {
             if (value == 'delete') {
-              await productProvider.deleteProduct(product.id!);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Product deleted')),
-              );
+              await productProvider.deleteProduct(product.id!, context);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Product deleted')),
+                );
+              }
             } else if (value == 'edit') {
-              Navigator.pushNamed(context, '/add-product',
-                  arguments: product);
+              Navigator.pushNamed(context, '/add-product', arguments: product);
             }
           },
           itemBuilder: (context) => [

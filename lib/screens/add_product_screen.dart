@@ -4,7 +4,7 @@ import '../models/product_model.dart';
 import '../providers/product_provider.dart';
 
 class AddProductScreen extends StatefulWidget {
-  final Product? product; // Optional for editing
+  final Product? product; // For editing
 
   const AddProductScreen({super.key, this.product});
 
@@ -15,58 +15,45 @@ class AddProductScreen extends StatefulWidget {
 class _AddProductScreenState extends State<AddProductScreen> {
   final _formKey = GlobalKey<FormState>();
   late String _name;
-  late String _description;
   late double _price;
-  double? _discountPrice; // Nullable
-  late String _imageUrl;
+  late String _imagePath;
   late String _category;
-  late int _stock;
+  late int _quantity;
 
   @override
   void initState() {
     super.initState();
-    if (widget.product != null) {
-      _name = widget.product!.name;
-      _description = widget.product!.description;
-      _price = widget.product!.price;
-      _discountPrice = widget.product!.discountPrice; // ✅ Fixed null safety
-      _imageUrl = widget.product!.imageUrl;
-      _category = widget.product!.category;
-      _stock = widget.product!.stock;
-    } else {
-      _name = '';
-      _description = '';
-      _price = 0.0;
-      _discountPrice = null;
-      _imageUrl = '';
-      _category = '';
-      _stock = 0;
-    }
+    _name = widget.product?.name ?? '';
+    _price = widget.product?.price ?? 0.0;
+    _imagePath = widget.product?.imagePath ?? '';
+    _category = widget.product?.category ?? '';
+    _quantity = widget.product?.quantity ?? 1;
   }
 
-  void _saveForm() {
+  void _saveForm() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
+
       final newProduct = Product(
-        id: widget.product?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        id: widget.product?.id ??
+            DateTime.now().millisecondsSinceEpoch.toString(),
         name: _name,
-        description: _description,
         price: _price,
-        discountPrice: _discountPrice,
-        imageUrl: _imageUrl,
+        imagePath: _imagePath,
         category: _category,
-        quantity: 0,
-        stock: _stock,
+        quantity: _quantity,
       );
 
-      final productProvider = Provider.of<ProductProvider>(context, listen: false);
+      final productProvider =
+          Provider.of<ProductProvider>(context, listen: false);
+
       if (widget.product == null) {
-        productProvider.addProduct(newProduct);
+        await productProvider.addProduct(newProduct, context);
       } else {
-        productProvider.updateProduct(newProduct); // ✅ Now works
+        await productProvider.updateProduct(newProduct, context);
       }
 
-      Navigator.pop(context);
+      if (mounted) Navigator.pop(context);
     }
   }
 
@@ -75,6 +62,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.product == null ? 'Add Product' : 'Edit Product'),
+        backgroundColor: Colors.green,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -82,58 +70,83 @@ class _AddProductScreenState extends State<AddProductScreen> {
           key: _formKey,
           child: ListView(
             children: [
-              TextFormField(
+              _buildTextField(
+                label: 'Product Name',
                 initialValue: _name,
-                decoration: const InputDecoration(labelText: 'Name'),
-                onSaved: (value) => _name = value!,
-                validator: (value) => value!.isEmpty ? 'Enter name' : null,
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'Enter product name' : null,
+                onSaved: (v) => _name = v!,
               ),
-              TextFormField(
-                initialValue: _description,
-                decoration: const InputDecoration(labelText: 'Description'),
-                onSaved: (value) => _description = value!,
-                validator: (value) => value!.isEmpty ? 'Enter description' : null,
-              ),
-              TextFormField(
-                initialValue: _price.toString(),
-                decoration: const InputDecoration(labelText: 'Price'),
+              _buildTextField(
+                label: 'Price',
+                initialValue: _price == 0 ? '' : _price.toString(),
                 keyboardType: TextInputType.number,
-                onSaved: (value) => _price = double.parse(value!),
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'Enter price' : null,
+                onSaved: (v) => _price = double.parse(v!),
               ),
-              TextFormField(
-                initialValue: _discountPrice?.toString() ?? '',
-                decoration: const InputDecoration(labelText: 'Discount Price (optional)'),
-                keyboardType: TextInputType.number,
-                onSaved: (value) {
-                  if (value != null && value.isNotEmpty) {
-                    _discountPrice = double.parse(value);
-                  }
-                },
+              _buildTextField(
+                label: 'Image Path (URL)',
+                initialValue: _imagePath,
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'Enter image path' : null,
+                onSaved: (v) => _imagePath = v!,
               ),
-              TextFormField(
-                initialValue: _imageUrl,
-                decoration: const InputDecoration(labelText: 'Image URL'),
-                onSaved: (value) => _imageUrl = value!,
-              ),
-              TextFormField(
+              _buildTextField(
+                label: 'Category',
                 initialValue: _category,
-                decoration: const InputDecoration(labelText: 'Category'),
-                onSaved: (value) => _category = value!,
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'Enter category' : null,
+                onSaved: (v) => _category = v!,
               ),
-              TextFormField(
-                initialValue: _stock.toString(),
-                decoration: const InputDecoration(labelText: 'Stock'),
+              _buildTextField(
+                label: 'Quantity',
+                initialValue: _quantity.toString(),
                 keyboardType: TextInputType.number,
-                onSaved: (value) => _stock = int.parse(value!),
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'Enter quantity' : null,
+                onSaved: (v) => _quantity = int.parse(v!),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _saveForm,
-                child: Text(widget.product == null ? 'Add Product' : 'Update Product'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: Text(
+                  widget.product == null ? 'Add Product' : 'Update Product',
+                  style: const TextStyle(fontSize: 16, color: Colors.white),
+                ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required String label,
+    required String initialValue,
+    required FormFieldValidator<String> validator,
+    required FormFieldSetter<String> onSaved,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: TextFormField(
+        initialValue: initialValue,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        validator: validator,
+        onSaved: onSaved,
+        keyboardType: keyboardType,
       ),
     );
   }
