@@ -4,8 +4,21 @@ import '../models/product_model.dart';
 import '../providers/product_provider.dart';
 import 'add_product_screen.dart';
 
-class ManageProductsScreen extends StatelessWidget {
+class ManageProductsScreen extends StatefulWidget {
   const ManageProductsScreen({super.key});
+
+  @override
+  State<ManageProductsScreen> createState() => _ManageProductsScreenState();
+}
+
+class _ManageProductsScreenState extends State<ManageProductsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Fetch products when screen loads
+    Future.microtask(() =>
+        Provider.of<ProductProvider>(context, listen: false).fetchProducts());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +75,18 @@ class ManageProductsScreen extends StatelessWidget {
                                 value: !isOutOfStock,
                                 activeColor: Colors.green,
                                 onChanged: (value) async {
+                                  if (product.id.isEmpty) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('❌ Product ID is missing'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                    return;
+                                  }
+
                                   final updatedProduct = product.copyWith(
                                     stock: value ? 10 : 0, // ✅ change stock
                                   );
@@ -97,8 +122,19 @@ class ManageProductsScreen extends StatelessWidget {
                                   color: Colors.red,
                                 ),
                                 onPressed: () async {
+                                  if (product.id.isEmpty) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('❌ Product ID is missing'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                    return;
+                                  }
                                   await provider.deleteProduct(
-                                    product.id!,
+                                    product.id,
                                     context,
                                   );
                                 },

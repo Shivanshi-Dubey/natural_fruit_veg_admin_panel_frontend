@@ -76,6 +76,18 @@ class ProductProvider with ChangeNotifier {
   ========================= */
   Future<void> updateProduct(Product product, BuildContext context) async {
     try {
+      if (product.id.isEmpty) {
+        _showSnackBar(context, '❌ Product ID is missing');
+        return;
+      }
+
+      // Optimistically update the UI immediately
+      final index = _products.indexWhere((p) => p.id == product.id);
+      if (index != -1) {
+        _products[index] = product;
+        notifyListeners();
+      }
+
       final response = await http.put(
         Uri.parse('$baseUrl/${product.id}'),
         headers: {'Content-Type': 'application/json'},
@@ -89,13 +101,21 @@ class ProductProvider with ChangeNotifier {
       );
 
       if (response.statusCode == 200) {
+        // Refresh from server to ensure consistency
         await fetchProducts();
         _showSnackBar(context, '✅ Product updated successfully');
       } else {
+        // Revert optimistic update on error
+        if (index != -1) {
+          await fetchProducts(); // Reload to revert
+        }
+        final errorBody = response.body;
         _showSnackBar(
-            context, '❌ Failed to update product');
+            context, '❌ Failed to update product (${response.statusCode}): $errorBody');
       }
     } catch (e) {
+      // Revert optimistic update on error
+      await fetchProducts(); // Reload to revert
       _showSnackBar(context, '⚠️ Error updating product: $e');
     }
   }
