@@ -25,12 +25,15 @@ class ManageProductsScreen extends StatelessWidget {
                   child: ListView.builder(
                     itemCount: provider.products.length,
                     itemBuilder: (context, index) {
-                      final product = provider.products[index];
-                      final isOutOfStock = product.quantity <= 0;
+                      final Product product = provider.products[index];
+
+                      // ✅ STOCK is the source of truth
+                      final bool isOutOfStock = product.stock <= 0;
 
                       return Card(
                         margin: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 8),
+                        elevation: 2,
                         child: ListTile(
                           leading: Image.network(
                             product.imagePath.isNotEmpty
@@ -40,29 +43,42 @@ class ManageProductsScreen extends StatelessWidget {
                             height: 60,
                             fit: BoxFit.cover,
                           ),
-                          title: Text(product.name),
+                          title: Text(
+                            product.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                           subtitle: Text(
                             '₹${product.price.toStringAsFixed(2)} • ${product.category}\n'
-                            'Quantity: ${product.quantity}',
+                            'Stock: ${product.stock}',
                             style: const TextStyle(fontSize: 13),
                           ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              // ✅ OUT OF STOCK TOGGLE (STOCK BASED)
                               Switch(
                                 value: !isOutOfStock,
                                 activeColor: Colors.green,
                                 onChanged: (value) async {
-                                  final newQty =
-                                      value ? (product.quantity > 0 ? product.quantity : 1) : 0;
                                   final updatedProduct = product.copyWith(
-                                    quantity: newQty,
+                                    stock: value ? 10 : 0, // ✅ change stock
                                   );
-                                  await provider.updateProduct(updatedProduct, context);
+
+                                  await provider.updateProduct(
+                                    updatedProduct,
+                                    context,
+                                  );
                                 },
                               ),
+
+                              // ✏️ EDIT
                               IconButton(
-                                icon: const Icon(Icons.edit, color: Colors.blue),
+                                icon: const Icon(
+                                  Icons.edit,
+                                  color: Colors.blue,
+                                ),
                                 onPressed: () {
                                   Navigator.push(
                                     context,
@@ -73,10 +89,18 @@ class ManageProductsScreen extends StatelessWidget {
                                   );
                                 },
                               ),
+
+                              // ❌ DELETE
                               IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                ),
                                 onPressed: () async {
-                                  await provider.deleteProduct(product.id!, context);
+                                  await provider.deleteProduct(
+                                    product.id!,
+                                    context,
+                                  );
                                 },
                               ),
                             ],
@@ -87,13 +111,15 @@ class ManageProductsScreen extends StatelessWidget {
                   ),
                 ),
       floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.green,
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const AddProductScreen()),
+            MaterialPageRoute(
+              builder: (_) => const AddProductScreen(),
+            ),
           );
         },
-        backgroundColor: Colors.green,
         child: const Icon(Icons.add),
       ),
     );

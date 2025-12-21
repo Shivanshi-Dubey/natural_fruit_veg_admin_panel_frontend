@@ -35,7 +35,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int getTotalPurchasedQuantity(List<Order> orders) {
     int totalQty = 0;
     for (final order in orders) {
-      for (final product in order.products) {
+      for (final product in order.items) {
         totalQty += product.quantity;
       }
     }
@@ -45,7 +45,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<MapEntry<String, int>> getTopSellingProducts(List<Order> orders) {
     final Map<String, int> productCountMap = {};
     for (final order in orders) {
-      for (final product in order.products) {
+      for (final product in order.items) {
         productCountMap[product.name] =
             (productCountMap[product.name] ?? 0) + product.quantity;
       }

@@ -12,10 +12,11 @@ class ProductProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  final String baseUrl =
-      'https://naturalfruitveg.com/api/products';
+  final String baseUrl = 'https://naturalfruitveg.com/api/products';
 
-  // ✅ FETCH PRODUCTS
+  /* =========================
+     📥 FETCH PRODUCTS
+  ========================= */
   Future<void> fetchProducts() async {
     _isLoading = true;
     _errorMessage = null;
@@ -23,107 +24,118 @@ class ProductProvider with ChangeNotifier {
 
     try {
       final response = await http.get(Uri.parse(baseUrl));
-      print('📥 fetchProducts response: ${response.statusCode} ${response.body}');
 
       if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
-        final List<dynamic> data =
-            body is List ? body : (body['products'] ?? body['data'] ?? []);
-        _products = data.map((e) => Product.fromJson(e)).toList();
+        final decoded = jsonDecode(response.body);
+        final List<dynamic> list =
+            decoded is List ? decoded : (decoded['products'] ?? []);
+
+        _products = list.map((e) => Product.fromJson(e)).toList();
       } else {
         _errorMessage =
-            'Failed to load products (${response.statusCode}): ${response.body}';
+            'Failed to load products (${response.statusCode})';
       }
     } catch (e) {
-      _errorMessage = 'Error: $e';
-      print('❌ fetchProducts error: $e');
+      _errorMessage = 'Error fetching products: $e';
     }
 
     _isLoading = false;
     notifyListeners();
   }
 
-  // ✅ ADD PRODUCT
+  /* =========================
+     ➕ ADD PRODUCT
+  ========================= */
   Future<void> addProduct(Product product, BuildContext context) async {
     try {
       final response = await http.post(
         Uri.parse(baseUrl),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(product.toJson()),
+        body: jsonEncode({
+          'name': product.name,
+          'price': product.price,
+          'imagePath': product.imagePath,
+          'category': product.category,
+          'stock': product.stock,
+        }),
       );
 
-      print('📤 addProduct response: ${response.statusCode} ${response.body}');
-
       if (response.statusCode == 201) {
-        _showSnackBar(context, '✅ Product added successfully!');
         await fetchProducts();
+        _showSnackBar(context, '✅ Product added successfully');
       } else {
-        _showSnackBar(context,
-            '❌ Failed to add product (${response.statusCode})');
+        _showSnackBar(context, '❌ Failed to add product');
       }
     } catch (e) {
       _showSnackBar(context, '⚠️ Error adding product: $e');
     }
   }
 
-  // ✅ UPDATE PRODUCT
+  /* =========================
+     ✏️ UPDATE PRODUCT (STOCK FIX)
+  ========================= */
   Future<void> updateProduct(Product product, BuildContext context) async {
     try {
       final response = await http.put(
         Uri.parse('$baseUrl/${product.id}'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(product.toJson()),
+        body: jsonEncode({
+          'name': product.name,
+          'price': product.price,
+          'imagePath': product.imagePath,
+          'category': product.category,
+          'stock': product.stock, // ✅ ONLY STOCK
+        }),
       );
-
-      print('🔁 updateProduct response: ${response.statusCode} ${response.body}');
 
       if (response.statusCode == 200) {
         await fetchProducts();
-        _showSnackBar(context, '✅ Product updated successfully!');
+        _showSnackBar(context, '✅ Product updated successfully');
       } else {
-        _showSnackBar(context,
-            '❌ Failed to update product (${response.statusCode})');
+        _showSnackBar(
+            context, '❌ Failed to update product');
       }
     } catch (e) {
       _showSnackBar(context, '⚠️ Error updating product: $e');
     }
   }
 
-  // ✅ DELETE PRODUCT
+  /* =========================
+     🗑 DELETE PRODUCT
+  ========================= */
   Future<void> deleteProduct(String id, BuildContext context) async {
     try {
-      final response = await http.delete(Uri.parse('$baseUrl/$id'));
-
-      print('🗑️ deleteProduct response: ${response.statusCode} ${response.body}');
+      final response = await http.delete(
+        Uri.parse('$baseUrl/$id'),
+      );
 
       if (response.statusCode == 200) {
         _products.removeWhere((p) => p.id == id);
         notifyListeners();
-        _showSnackBar(context, '🗑️ Product deleted successfully!');
+        _showSnackBar(context, '🗑 Product deleted');
       } else {
-        _showSnackBar(context,
-            '❌ Failed to delete product (${response.statusCode})');
+        _showSnackBar(
+            context, '❌ Failed to delete product');
       }
     } catch (e) {
       _showSnackBar(context, '⚠️ Error deleting product: $e');
     }
   }
 
-  // ✅ Snackbar Helper
+  /* =========================
+     🔔 SNACKBAR
+  ========================= */
   void _showSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          message,
-          style: const TextStyle(color: Colors.white, fontSize: 15),
-        ),
+        content: Text(message),
         backgroundColor:
-            message.contains('✅') || message.contains('🗑️')
+            message.startsWith('✅') || message.startsWith('🗑')
                 ? Colors.green
                 : Colors.red,
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(10),
+        margin: const EdgeInsets.all(12),
       ),
     );
   }

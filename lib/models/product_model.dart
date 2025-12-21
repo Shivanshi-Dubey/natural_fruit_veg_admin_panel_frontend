@@ -1,18 +1,23 @@
+import 'package:flutter/foundation.dart';
+
+@immutable
 class Product {
-  final String? id;
+  final String id;
   final String name;
   final double price;
   final String imagePath;
   final String category;
-  final int quantity;
 
-  Product({
-    this.id,
+  // ✅ ONLY stock (admin controls this)
+  final int stock;
+
+  const Product({
+    required this.id,
     required this.name,
     required this.price,
     required this.imagePath,
     required this.category,
-    required this.quantity,
+    required this.stock,
   });
 
   Product copyWith({
@@ -21,7 +26,7 @@ class Product {
     double? price,
     String? imagePath,
     String? category,
-    int? quantity,
+    int? stock,
   }) {
     return Product(
       id: id ?? this.id,
@@ -29,28 +34,26 @@ class Product {
       price: price ?? this.price,
       imagePath: imagePath ?? this.imagePath,
       category: category ?? this.category,
-      quantity: quantity ?? this.quantity,
+      stock: stock ?? this.stock,
     );
   }
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
-      id: json['_id'] ?? json['id'],
-      name: json['name'] ?? '',
-      price: (json['price'] ?? 0).toDouble(),
-      imagePath: json['imagePath'] ?? '',
-      category: json['category'] ?? '',
-      quantity: json['stock'] ?? json['quantity'] ?? 0, // Support both stock and quantity
+      id: json['_id'],
+      name: json['name'],
+      price: (json['price'] as num).toDouble(),
+      imagePath: json['imagePath'],
+      category: json['category'],
+      stock: json['stock'] ?? 0,
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'price': price,
-      'imagePath': imagePath,
-      'category': category,
-      'stock': quantity, // Send as 'stock' to match backend
-    };
-  }
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'price': price,
+        'imagePath': imagePath,
+        'category': category,
+        'stock': stock,
+      };
 }
