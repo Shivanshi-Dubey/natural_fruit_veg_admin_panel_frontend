@@ -40,7 +40,7 @@ class Product {
       price: (json['price'] ?? 0).toDouble(),
       imagePath: json['imagePath'] ?? '',
       category: json['category'] ?? '',
-      quantity: json['quantity'] ?? 0,
+      quantity: json['stock'] ?? json['quantity'] ?? 0, // Support both stock and quantity
     );
   }
 
@@ -50,7 +50,7 @@ class Product {
       'price': price,
       'imagePath': imagePath,
       'category': category,
-      'quantity': quantity,
+      'stock': quantity, // Send as 'stock' to match backend
     };
   }
 }

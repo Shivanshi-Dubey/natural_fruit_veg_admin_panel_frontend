@@ -1,4 +1,4 @@
-const String baseUrl = 'https://natural-fruit-veg-admin-panel-backend.onrender.com';
+const String baseUrl = 'https://naturalfruitveg.com';
 
 
 // You can switch this for production easily later

@@ -13,7 +13,7 @@ class ProductProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   final String baseUrl =
-      'https://natural-fruit-veg-admin-panel-backend.onrender.com/api/products';
+      'https://naturalfruitveg.com/api/products';
 
   // ✅ FETCH PRODUCTS
   Future<void> fetchProducts() async {
