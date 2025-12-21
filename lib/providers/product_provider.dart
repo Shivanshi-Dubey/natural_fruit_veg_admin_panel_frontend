@@ -88,22 +88,35 @@ class ProductProvider with ChangeNotifier {
         notifyListeners();
       }
 
+      final requestBody = {
+        'name': product.name,
+        'price': product.price,
+        'imagePath': product.imagePath,
+        'category': product.category,
+        'stock': product.stock, // ✅ Send stock explicitly (including 0)
+      };
+
+      print('🔄 Updating product ${product.id} with stock: ${product.stock}');
+      print('📤 Request body: $requestBody');
+
       final response = await http.put(
         Uri.parse('$baseUrl/${product.id}'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'name': product.name,
-          'price': product.price,
-          'imagePath': product.imagePath,
-          'category': product.category,
-          'stock': product.stock, // ✅ ONLY STOCK
-        }),
+        body: jsonEncode(requestBody),
       );
 
+      print('📥 Response status: ${response.statusCode}');
+      print('📥 Response body: ${response.body}');
+
       if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final updatedStock = responseData['product']?['stock'] ?? responseData['stock'];
+        print('✅ Updated product from server - Stock: $updatedStock');
+        print('✅ Full response: $responseData');
+        
         // Refresh from server to ensure consistency
         await fetchProducts();
-        _showSnackBar(context, '✅ Product updated successfully');
+        _showSnackBar(context, '✅ Product updated successfully (Stock: $updatedStock)');
       } else {
         // Revert optimistic update on error
         if (index != -1) {
