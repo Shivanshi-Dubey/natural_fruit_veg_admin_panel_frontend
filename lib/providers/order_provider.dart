@@ -73,11 +73,28 @@ class OrderProvider with ChangeNotifier {
   Future<void> acceptOrder(String orderId) =>
       updateOrder(orderId, orderStatus: 'accepted');
 
-  Future<void> assignDeliveryBoy(String orderId, String deliveryBoyId) =>
-      updateOrder(
-        orderId,
-        orderStatus: 'assigned',
-        deliveryBoyId: deliveryBoyId,
-      );
+ Future<void> assignDeliveryBoy(String orderId, String deliveryBoyId) async {
+  final url = Uri.parse('$baseUrl/api/orders/admin/$orderId');
+
+  final response = await http.put(
+    url,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode({
+      'deliveryBoyId': deliveryBoyId,
+    }),
+  );
+
+  if (response.statusCode != 200) {
+    throw Exception(
+      'Failed to update order (${response.statusCode}): ${response.body}',
+    );
+  }
+
+  // Refresh orders after update
+  await fetchOrders();
+}
+
 }
 
