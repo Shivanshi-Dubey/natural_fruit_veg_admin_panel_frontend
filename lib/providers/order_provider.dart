@@ -1,6 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
+
 import '../models/order_model.dart';
 
 class OrderProvider with ChangeNotifier {
@@ -12,20 +14,21 @@ class OrderProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  final String baseUrl = 'https://naturalfruitveg.com/api/orders'; // Adjust your backend endpoint
+  /// Admin-specific orders endpoint
+  final String baseUrl = 'https://naturalfruitveg.com/api/orders/admin';
 
   Future<void> fetchOrders() async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      final response = await http.get(Uri.parse(baseUrl));
+      final response = await http.get(Uri.parse('$baseUrl/all'));
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         _orders = data.map((e) => Order.fromJson(e)).toList();
         _errorMessage = null;
       } else {
-        _errorMessage = 'Failed to load orders';
+        _errorMessage = 'Failed to load orders (${response.statusCode})';
       }
     } catch (e) {
       _errorMessage = 'Error: $e';
@@ -35,18 +38,30 @@ class OrderProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateOrderStatus(String orderId, String status) async {
+  /// Generic update used by UI helpers below
+  Future<void> updateOrder(
+    String orderId, {
+    String? orderStatus,
+    String? paymentStatus,
+    String? deliveryBoyId,
+  }) async {
     try {
-      final response = await http.patch(
+      final Map<String, dynamic> body = {};
+      if (orderStatus != null) body['orderStatus'] = orderStatus;
+      if (paymentStatus != null) body['paymentStatus'] = paymentStatus;
+      if (deliveryBoyId != null) body['deliveryBoyId'] = deliveryBoyId;
+
+      final response = await http.put(
         Uri.parse('$baseUrl/$orderId'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'status': status}),
+        body: jsonEncode(body),
       );
 
       if (response.statusCode == 200) {
-        fetchOrders();
+        await fetchOrders();
       } else {
-        _errorMessage = 'Failed to update order status';
+        _errorMessage =
+            'Failed to update order (${response.statusCode}): ${response.body}';
         notifyListeners();
       }
     } catch (e) {
@@ -54,4 +69,15 @@ class OrderProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<void> acceptOrder(String orderId) =>
+      updateOrder(orderId, orderStatus: 'accepted');
+
+  Future<void> assignDeliveryBoy(String orderId, String deliveryBoyId) =>
+      updateOrder(
+        orderId,
+        orderStatus: 'assigned',
+        deliveryBoyId: deliveryBoyId,
+      );
 }
+
