@@ -148,10 +148,12 @@ class _OrderTile extends StatelessWidget {
                     child: const Text('Accept Order'),
                   ),
                 OutlinedButton(
-                  onPressed: () =>
-                      _showAssignDialog(context, provider, order.id),
-                  child: const Text('Assign Delivery Boy'),
-                ),
+  onPressed: order.orderStatus != 'accepted'
+      ? null
+      : () => _showAssignDialog(context, provider, order.id),
+  child: const Text('Assign Delivery Boy'),
+),
+
               ],
             ),
           ],
