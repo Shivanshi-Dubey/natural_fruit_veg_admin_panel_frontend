@@ -25,4 +25,28 @@ class OrderService {
       throw Exception('Failed to update status');
     }
   }
+
+  Future<void> assignDeliveryBoy({
+  required String orderId,
+  required String deliveryBoyId,
+}) async {
+  final url = Uri.parse(
+    '${ApiConfig.baseUrl}/api/orders/admin/$orderId',
+  );
+
+  final response = await http.put(
+    url,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode({
+      'deliveryBoyId': deliveryBoyId,
+    }),
+  );
+
+  if (response.statusCode != 200) {
+    throw Exception('Failed to assign delivery boy');
+  }
+}
+
 }
