@@ -4,7 +4,7 @@ class DeliveryBoy {
   final String phone;
   final bool isAvailable;
 
-  const DeliveryBoy({
+  DeliveryBoy({
     required this.id,
     required this.name,
     required this.phone,
@@ -13,10 +13,10 @@ class DeliveryBoy {
 
   factory DeliveryBoy.fromJson(Map<String, dynamic> json) {
     return DeliveryBoy(
-      id: (json['_id'] ?? json['id'] ?? '').toString(),
-      name: (json['name'] ?? '') as String,
-      phone: (json['phone'] ?? '') as String,
-      isAvailable: (json['isAvailable'] ?? true) as bool,
+      id: json['_id'] as String,
+      name: json['name'] as String,
+      phone: json['phone'] as String,
+      isAvailable: json['isAvailable'] ?? false,
     );
   }
 }
