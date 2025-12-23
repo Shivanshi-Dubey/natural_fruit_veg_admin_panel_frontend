@@ -93,6 +93,7 @@ class _OrderTile extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            /// HEADER
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -105,8 +106,8 @@ class _OrderTile extends StatelessWidget {
                 ),
                 Chip(
                   label: Text(order.orderStatus),
-                  backgroundColor: _statusColor(order.orderStatus)
-                      .withOpacity(0.15),
+                  backgroundColor:
+                      _statusColor(order.orderStatus).withOpacity(0.15),
                   labelStyle: TextStyle(
                     color: _statusColor(order.orderStatus),
                     fontWeight: FontWeight.w600,
@@ -114,14 +115,17 @@ class _OrderTile extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+
+            const SizedBox(height: 6),
             Text('Customer: ${order.customerName}'),
             const SizedBox(height: 4),
+
             Text(
               'Total: ₹${order.totalPrice.toStringAsFixed(0)} '
               '(Items: ₹${order.itemsTotal.toStringAsFixed(0)} + '
               'Delivery: ₹${order.deliveryCharge.toStringAsFixed(0)})',
             ),
+
             const SizedBox(height: 4),
             Text(
               'Payment: ${order.paymentStatus}',
@@ -131,11 +135,15 @@ class _OrderTile extends StatelessWidget {
                     : Colors.orange,
               ),
             ),
+
             const SizedBox(height: 4),
             Text(
               'Delivery Boy: ${order.deliveryBoyName ?? 'Not assigned'}',
             ),
-            const Divider(height: 16),
+
+            const Divider(height: 20),
+
+            /// ACTION BUTTONS
             Wrap(
               spacing: 8,
               children: [
@@ -147,13 +155,13 @@ class _OrderTile extends StatelessWidget {
                     ),
                     child: const Text('Accept Order'),
                   ),
-                OutlinedButton(
-  onPressed: order.orderStatus != 'accepted'
-      ? null
-      : () => _showAssignDialog(context, provider, order.id),
-  child: const Text('Assign Delivery Boy'),
-),
 
+                OutlinedButton(
+                  onPressed: order.orderStatus != 'accepted'
+                      ? null
+                      : () => _showAssignDialog(context, provider, order.id),
+                  child: const Text('Assign Delivery Boy'),
+                ),
               ],
             ),
           ],
@@ -162,13 +170,13 @@ class _OrderTile extends StatelessWidget {
     );
   }
 
+  /// ASSIGN DELIVERY BOY DIALOG
   Future<void> _showAssignDialog(
     BuildContext context,
     OrderProvider provider,
     String orderId,
   ) async {
     DeliveryBoy? selected;
-
     final List<DeliveryBoy> boys = await _fetchDeliveryBoys();
 
     if (!context.mounted) return;
@@ -186,16 +194,16 @@ class _OrderTile extends StatelessWidget {
                       isExpanded: true,
                       value: selected,
                       hint: const Text('Select delivery boy'),
-                      items: boys
-                          .map(
-                            (b) => DropdownMenuItem(
-                              value: b,
-                              child: Text('${b.name} (${b.phone})'),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (val) {
-                        setState(() => selected = val);
+                      items: boys.map((b) {
+                        return DropdownMenuItem<DeliveryBoy>(
+                          value: b,
+                          child: Text('${b.name} (${b.phone})'),
+                        );
+                      }).toList(),
+                      onChanged: (DeliveryBoy? val) {
+                        setState(() {
+                          selected = val;
+                        });
                       },
                     );
                   },
@@ -205,26 +213,29 @@ class _OrderTile extends StatelessWidget {
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancel'),
             ),
-            if (boys.isNotEmpty)
-              ElevatedButton(
-                onPressed: selected == null
-                    ? null
-                    : () async {
-                        await provider.assignDeliveryBoy(orderId, selected!.id);
-                        if (context.mounted) Navigator.pop(context);
-                      },
-                child: const Text('Assign'),
-              ),
+            ElevatedButton(
+              onPressed: selected == null
+                  ? null
+                  : () async {
+                      await provider.assignDeliveryBoy(orderId, selected!.id);
+                      if (context.mounted) Navigator.pop(context);
+                    },
+              child: const Text('Assign'),
+            ),
           ],
         );
       },
     );
   }
 
+  /// FETCH DELIVERY BOYS
   Future<List<DeliveryBoy>> _fetchDeliveryBoys() async {
     final uri = Uri.parse(
-        'https://naturalfruitveg.com/api/delivery-boys?onlyAvailable=true');
+      'https://naturalfruitveg.com/api/delivery-boys?onlyAvailable=true',
+    );
+
     final response = await http.get(uri);
+
     if (response.statusCode == 200) {
       final List data = jsonDecode(response.body) as List;
       return data.map((e) => DeliveryBoy.fromJson(e)).toList();
