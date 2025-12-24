@@ -117,39 +117,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                           ),
                           InkWell(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const OrdersScreen(),
-                                ),
-                              );
-                            },
-                            child: DashboardCard(
-                              title: 'Total Orders',
-                              value: getTotalOrders(allOrders).toString(),
-                              icon: Icons.shopping_cart_checkout_rounded,
-                              color: Colors.blue.shade100,
-                            ),
-                          ),
-                          InkWell(
-                            onTap: () {}, // Future link to sales screen
-                            child: DashboardCard(
-                              title: 'Total Sale',
-                              value: '₹${totalRevenue.toStringAsFixed(2)}',
-                              icon: Icons.currency_rupee_rounded,
-                              color: Colors.green.shade100,
-                            ),
-                          ),
-                          InkWell(
-                            onTap: () {}, // Future link to purchase screen
-                            child: DashboardCard(
-                              title: 'Total Purchase',
-                              value: totalPurchasedQty.toString(),
-                              icon: Icons.shopping_bag_outlined,
-                              color: Colors.purple.shade100,
-                            ),
-                          ),
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const OrdersScreen(showOnlyPaid: true),
+      ),
+    );
+  },
+  child: DashboardCard(
+    title: 'Total Sale',
+    value: '₹${totalRevenue.toStringAsFixed(2)}',
+    icon: Icons.currency_rupee_rounded,
+    color: Colors.green.shade100,
+  ),
+),
+
+InkWell(
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const OrdersScreen(),
+      ),
+    );
+  },
+  child: DashboardCard(
+    title: 'Total Purchase',
+    value: totalPurchasedQty.toString(),
+    icon: Icons.shopping_bag_outlined,
+    color: Colors.purple.shade100,
+  ),
+),
                         ],
                       ),
                       const SizedBox(height: 30),
