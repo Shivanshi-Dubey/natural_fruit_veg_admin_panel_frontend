@@ -1,60 +1,48 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/order_provider.dart';
 
 class ReportsScreen extends StatelessWidget {
   const ReportsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final orders = Provider.of<OrderProvider>(context).orders;
+
+    final totalOrders = orders.length;
+    final totalRevenue =
+        orders.fold(0.0, (sum, o) => sum + o.totalPrice);
+    final paidOrders =
+        orders.where((o) => o.paymentStatus == 'paid').length;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Reports"),
+        title: const Text('Reports'),
         backgroundColor: Colors.green.shade700,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "Sales Report Overview",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: LineChart(
-                LineChartData(
-                  gridData: FlGridData(show: true),
-                  borderData: FlBorderData(show: false),
-                  titlesData: FlTitlesData(
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(showTitles: true),
-                    ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(showTitles: true),
-                    ),
-                  ),
-                  lineBarsData: [
-                    LineChartBarData(
-                      isCurved: true,
-                      color: Colors.green,
-                      belowBarData: BarAreaData(
-                        show: true,
-                        color: Colors.green.withOpacity(0.2),
-                      ),
-                      spots: const [
-                        FlSpot(0, 1),
-                        FlSpot(1, 3),
-                        FlSpot(2, 2),
-                        FlSpot(3, 4),
-                        FlSpot(4, 3),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            _reportTile('Total Orders', totalOrders.toString()),
+            _reportTile(
+                'Total Revenue', '₹${totalRevenue.toStringAsFixed(2)}'),
+            _reportTile('Paid Orders', paidOrders.toString()),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _reportTile(String title, String value) {
+    return Card(
+      child: ListTile(
+        title: Text(title),
+        trailing: Text(
+          value,
+          style: const TextStyle(
+              fontWeight: FontWeight.bold, fontSize: 16),
         ),
       ),
     );

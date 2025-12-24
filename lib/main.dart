@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 // Providers
 import 'providers/product_provider.dart';
 import 'providers/order_provider.dart';
+import 'providers/theme_provider.dart';
 
 // Screens
 import 'screens/admin_home_screen.dart';
@@ -25,23 +26,35 @@ class AdminApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
-      child: MaterialApp(
-        title: 'Admin Panel - Natural Fruits & Vegetables',
-        theme: ThemeData(
-          primarySwatch: Colors.green,
-          scaffoldBackgroundColor: Colors.grey[100],
-        ),
-        debugShowCheckedModeBanner: false,
+      child: Consumer<ThemeProvider>(
+        builder: (context, theme, _) {
+          return MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'Admin Panel - Natural Fruits & Vegetables',
 
-        // 👇 Set AdminHomeScreen as the main entry point
-        home: const AdminHomeScreen(),
+            // 🌙 THEME SUPPORT
+            themeMode: theme.themeMode,
+            theme: ThemeData(
+              primarySwatch: Colors.green,
+              scaffoldBackgroundColor: Colors.grey[100],
+            ),
+            darkTheme: ThemeData.dark(),
 
-        routes: {
-          '/dashboard': (context) => const DashboardScreen(),
-          '/manage-products': (context) => const ManageProductsScreen(),
-          '/manage-orders': (context) => const ManageOrdersScreen(),
-          '/add-product': (context) => const AddProductScreen(),
+            // 👇 ENTRY POINT
+            home: const AdminHomeScreen(),
+
+            routes: {
+              '/dashboard': (context) => const DashboardScreen(),
+              '/manage-products': (context) =>
+                  const ManageProductsScreen(),
+              '/manage-orders': (context) =>
+                  const ManageOrdersScreen(),
+              '/add-product': (context) =>
+                  const AddProductScreen(),
+            },
+          );
         },
       ),
     );
