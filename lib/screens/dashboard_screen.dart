@@ -254,27 +254,43 @@ class DashboardCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Card(
-      color: color,
+      color: isDark ? Colors.grey.shade900 : color,
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Row(
           children: [
-            Icon(icon, size: 40, color: Colors.black54),
+            Icon(
+              icon,
+              size: 40,
+              color: isDark ? Colors.white70 : Colors.black54,
+            ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w500)),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? Colors.white70 : Colors.black87,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(value,
-                      style: const TextStyle(
-                          fontSize: 22, fontWeight: FontWeight.bold)),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -284,6 +300,7 @@ class DashboardCard extends StatelessWidget {
     );
   }
 }
+
 
 class AdminDrawer extends StatelessWidget {
   const AdminDrawer({super.key});
