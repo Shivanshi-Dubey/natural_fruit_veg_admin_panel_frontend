@@ -17,32 +17,55 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          /// 🌙 DARK MODE TOGGLE (NOW FUNCTIONAL)
           SwitchListTile(
             title: const Text("Dark Mode"),
             value: themeProvider.isDarkMode,
-            onChanged: (val) {
-              themeProvider.toggleTheme(val);
+            onChanged: (value) {
+              themeProvider.toggleTheme(value);
             },
+            secondary: const Icon(Icons.dark_mode),
           ),
+
           const Divider(),
+
+          /// 🔐 CHANGE PASSWORD (PLACEHOLDER)
           ListTile(
             leading: const Icon(Icons.lock_outline),
             title: const Text("Change Password"),
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Coming soon")),
+                const SnackBar(
+                  content: Text("Change Password feature coming soon"),
+                ),
               );
             },
           ),
+
           const Divider(),
+
+          /// ℹ️ ABOUT APP (WORKING DIALOG)
           ListTile(
             leading: const Icon(Icons.info_outline),
             title: const Text("About App"),
             onTap: () {
-              showAboutDialog(
+              showDialog(
                 context: context,
-                applicationName: 'Natural Fruit & Vegetable Admin',
-                applicationVersion: '1.0.0',
+                builder: (context) => AlertDialog(
+                  title: const Text("About App"),
+                  content: const Text(
+                    "Natural Fruits & Vegetables\n"
+                    "Admin Panel\n\n"
+                    "Version: 1.0.0\n"
+                    "Developed with Flutter",
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("OK"),
+                    ),
+                  ],
+                ),
               );
             },
           ),
