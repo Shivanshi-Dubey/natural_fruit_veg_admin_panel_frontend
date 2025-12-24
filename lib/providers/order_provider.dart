@@ -1,100 +1,105 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/order_model.dart';
 
 class OrderProvider with ChangeNotifier {
+  // ================= STATE =================
   List<Order> _orders = [];
   bool _isLoading = false;
   String? _errorMessage;
 
+  // ================= GETTERS =================
   List<Order> get orders => _orders;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  /// Admin-specific orders endpoint
+  // ================= BASE URL =================
   final String baseUrl = 'https://naturalfruitveg.com/api/orders/admin';
 
+  // ================= FETCH ORDERS =================
   Future<void> fetchOrders() async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
 
     try {
       final response = await http.get(Uri.parse('$baseUrl/all'));
+
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
+        final List data = jsonDecode(response.body);
         _orders = data.map((e) => Order.fromJson(e)).toList();
-        _errorMessage = null;
       } else {
-        _errorMessage = 'Failed to load orders (${response.statusCode})';
+        _errorMessage =
+            'Failed to load orders (${response.statusCode}): ${response.body}';
       }
     } catch (e) {
-      _errorMessage = 'Error: $e';
+      _errorMessage = 'Error fetching orders: $e';
     }
 
     _isLoading = false;
     notifyListeners();
   }
 
-  /// Generic update used by UI helpers below
-  Future<void> updateOrder(
-    String orderId, {
-    String? orderStatus,
-    String? paymentStatus,
-    String? deliveryBoyId,
-  }) async {
-    try {
-      final Map<String, dynamic> body = {};
-      if (orderStatus != null) body['orderStatus'] = orderStatus;
-      if (paymentStatus != null) body['paymentStatus'] = paymentStatus;
-      if (deliveryBoyId != null) body['deliveryBoyId'] = deliveryBoyId;
+  // ================= ACCEPT ORDER =================
+  /// API: PUT /api/orders/admin/accept/:id
+  /// ❌ No deliveryBoyId required
+  Future<void> acceptOrder(String orderId) async {
+    _errorMessage = null;
+    notifyListeners();
 
+    try {
       final response = await http.put(
-        Uri.parse('$baseUrl/$orderId'),
+        Uri.parse('$baseUrl/accept/$orderId'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(body),
       );
 
       if (response.statusCode == 200) {
         await fetchOrders();
       } else {
         _errorMessage =
-            'Failed to update order (${response.statusCode}): ${response.body}';
+            'Failed to accept order (${response.statusCode}): ${response.body}';
         notifyListeners();
       }
     } catch (e) {
-      _errorMessage = 'Error: $e';
+      _errorMessage = 'Error accepting order: $e';
       notifyListeners();
     }
   }
 
-  Future<void> acceptOrder(String orderId) =>
-      updateOrder(orderId, orderStatus: 'accepted');
+  // ================= ASSIGN DELIVERY BOY =================
+  /// API: PUT /api/orders/admin/:id
+  /// ✅ deliveryBoyId REQUIRED
+  Future<void> assignDeliveryBoy(String orderId, String deliveryBoyId) async {
+    _errorMessage = null;
+    notifyListeners();
 
- Future<void> assignDeliveryBoy(String orderId, String deliveryBoyId) async {
-  final url = Uri.parse('$baseUrl/api/orders/admin/$orderId');
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/$orderId'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'deliveryBoyId': deliveryBoyId,
+        }),
+      );
 
-  final response = await http.put(
-    url,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: jsonEncode({
-      'deliveryBoyId': deliveryBoyId,
-    }),
-  );
-
-  if (response.statusCode != 200) {
-    throw Exception(
-      'Failed to update order (${response.statusCode}): ${response.body}',
-    );
+      if (response.statusCode == 200) {
+        await fetchOrders();
+      } else {
+        _errorMessage =
+            'Failed to assign delivery boy (${response.statusCode}): ${response.body}';
+        notifyListeners();
+      }
+    } catch (e) {
+      _errorMessage = 'Error assigning delivery boy: $e';
+      notifyListeners();
+    }
   }
 
-  // Refresh orders after update
-  await fetchOrders();
+  // ================= CLEAR ERROR (OPTIONAL) =================
+  void clearError() {
+    _errorMessage = null;
+    notifyListeners();
+  }
 }
-
-}
-
