@@ -13,9 +13,9 @@ class DeliveryBoy {
 
   factory DeliveryBoy.fromJson(Map<String, dynamic> json) {
     return DeliveryBoy(
-      id: json['_id'] as String,
-      name: json['name'] as String,
-      phone: json['phone'] as String,
+      id: json['_id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      phone: json['phone']?.toString() ?? '',
       isAvailable: json['isAvailable'] ?? false,
     );
   }

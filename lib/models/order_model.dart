@@ -43,21 +43,44 @@ class Order {
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
-    final user = json['user'] ?? {};
+    final user = json['user'];
     final deliveryBoy = json['deliveryBoy'];
     final List productsJson = (json['products'] as List? ?? []);
 
+    final String resolvedCustomerName;
+    if (user is Map) {
+      resolvedCustomerName = (user['name'] ?? 'Unknown') as String;
+    } else if (json['customerName'] != null) {
+      resolvedCustomerName = json['customerName'] as String;
+    } else {
+      resolvedCustomerName = 'Unknown';
+    }
+
+    final String? resolvedDeliveryBoyName;
+    final String? resolvedDeliveryBoyId;
+    if (deliveryBoy is Map) {
+      resolvedDeliveryBoyName = deliveryBoy['name'] as String?;
+      resolvedDeliveryBoyId =
+          (deliveryBoy['_id'] ?? deliveryBoy['id'])?.toString();
+    } else {
+      resolvedDeliveryBoyName = null;
+      resolvedDeliveryBoyId = null;
+    }
+
+    final createdAtRaw = json['createdAt'];
+
     return Order(
       id: (json['_id'] ?? '').toString(),
-      customerName: (user['name'] ?? 'Unknown') as String,
+      customerName: resolvedCustomerName,
       items: productsJson.map((e) => OrderItem.fromJson(e)).toList(),
       deliveryCharge: (json['deliveryCharge'] ?? 0).toDouble(),
       orderStatus: (json['orderStatus'] ?? 'placed') as String,
       paymentStatus: (json['paymentStatus'] ?? 'pending') as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      deliveryBoyName: deliveryBoy != null ? deliveryBoy['name'] as String? : null,
-      deliveryBoyId:
-          deliveryBoy != null ? (deliveryBoy['_id'] ?? deliveryBoy['id'])?.toString() : null,
+      createdAt: createdAtRaw != null
+          ? DateTime.parse(createdAtRaw as String)
+          : DateTime.now(),
+      deliveryBoyName: resolvedDeliveryBoyName,
+      deliveryBoyId: resolvedDeliveryBoyId,
     );
   }
 
