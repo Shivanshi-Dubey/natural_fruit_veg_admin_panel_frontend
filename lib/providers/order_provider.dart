@@ -71,32 +71,39 @@ class OrderProvider with ChangeNotifier {
   // ================= ASSIGN DELIVERY BOY =================
   /// API: PUT /api/orders/admin/:id
   /// ✅ deliveryBoyId REQUIRED
-  Future<void> assignDeliveryBoy(String orderId, String deliveryBoyId) async {
-    _errorMessage = null;
-    notifyListeners();
+Future<void> assignDeliveryBoy(String orderId, String deliveryBoyId) async {
+  _errorMessage = null;
+  notifyListeners();
 
-    try {
+  try {
+    print('Assigning delivery boy: $deliveryBoyId to order: $orderId');
+
     final response = await http.put(
-  Uri.parse('$baseUrl/assign/$orderId'), // 🔥 FIX HERE
-  headers: {'Content-Type': 'application/json'},
-  body: jsonEncode({
-    'deliveryBoyId': deliveryBoyId,
-  }),
-);
+      Uri.parse('$baseUrl/assign/$orderId'), // ✅ correct route
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'deliveryBoyId': deliveryBoyId, // ✅ MUST be non-null
+      }),
+    );
 
+    print('Assign response status: ${response.statusCode}');
+    print('Assign response body: ${response.body}');
 
-      if (response.statusCode == 200) {
-        await fetchOrders();
-      } else {
-        _errorMessage =
-            'Failed to assign delivery boy (${response.statusCode}): ${response.body}';
-        notifyListeners();
-      }
-    } catch (e) {
-      _errorMessage = 'Error assigning delivery boy: $e';
+    if (response.statusCode == 200) {
+      await fetchOrders(); // 🔥 refresh state
+    } else {
+      _errorMessage =
+          'Failed to assign delivery boy (${response.statusCode}): ${response.body}';
       notifyListeners();
     }
+  } catch (e) {
+    _errorMessage = 'Error assigning delivery boy: $e';
+    notifyListeners();
   }
+}
+
 
   // ================= CLEAR ERROR (OPTIONAL) =================
   void clearError() {

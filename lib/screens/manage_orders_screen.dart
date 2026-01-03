@@ -147,21 +147,25 @@ class _OrderTile extends StatelessWidget {
             Wrap(
               spacing: 8,
               children: [
-                if (order.orderStatus == 'placed')
-                  ElevatedButton(
-                    onPressed: () => provider.acceptOrder(order.id),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade700,
-                    ),
-                    child: const Text('Accept Order'),
-                  ),
+            if (order.orderStatus == 'placed')
+  ElevatedButton(
+    onPressed: () async {
+      await provider.acceptOrder(order.id);
+      await provider.fetchOrders(); // 🔥 THIS LINE IS CRITICAL
+    },
+    style: ElevatedButton.styleFrom(
+      backgroundColor: Colors.green.shade700,
+    ),
+    child: const Text('Accept Order'),
+  ),
 
-                OutlinedButton(
-                  onPressed: order.orderStatus != 'accepted'
-                      ? null
-                      : () => _showAssignDialog(context, provider, order.id),
-                  child: const Text('Assign Delivery Boy'),
-                ),
+if (order.orderStatus == 'accepted')
+  OutlinedButton(
+    onPressed: () =>
+        _showAssignDialog(context, provider, order.id),
+    child: const Text('Assign Delivery Boy'),
+  ),
+
               ],
             ),
           ],
