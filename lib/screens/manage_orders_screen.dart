@@ -217,15 +217,23 @@ if (order.orderStatus == 'accepted')
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancel'),
             ),
-            ElevatedButton(
-              onPressed: selected == null
-                  ? null
-                  : () async {
-                      await provider.assignDeliveryBoy(orderId, selected!.id);
-                      if (context.mounted) Navigator.pop(context);
-                    },
-              child: const Text('Assign'),
-            ),
+         ElevatedButton(
+  onPressed: selected == null
+      ? null
+      : () async {
+          // 🔥 FORCE LOG
+          debugPrint('Selected delivery boy id: ${selected!.id}');
+
+          await provider.assignDeliveryBoy(
+            orderId,
+            selected!.id,
+          );
+
+          if (context.mounted) Navigator.pop(context);
+        },
+  child: const Text('Assign'),
+),
+
           ],
         );
       },

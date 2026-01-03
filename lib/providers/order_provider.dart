@@ -72,38 +72,25 @@ class OrderProvider with ChangeNotifier {
   /// API: PUT /api/orders/admin/:id
   /// ✅ deliveryBoyId REQUIRED
 Future<void> assignDeliveryBoy(String orderId, String deliveryBoyId) async {
-  _errorMessage = null;
-  notifyListeners();
+  final response = await http.put(
+    Uri.parse(
+      'https://naturalfruitveg.com/api/orders/admin/assign/$orderId',
+    ),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode({
+      'deliveryBoyId': deliveryBoyId,
+    }),
+  );
 
-  try {
-    print('Assigning delivery boy: $deliveryBoyId to order: $orderId');
+  debugPrint('ASSIGN STATUS: ${response.statusCode}');
+  debugPrint('ASSIGN BODY: ${response.body}');
 
-    final response = await http.put(
-      Uri.parse('$baseUrl/assign/$orderId'), // ✅ correct route
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'deliveryBoyId': deliveryBoyId, // ✅ MUST be non-null
-      }),
-    );
-
-    print('Assign response status: ${response.statusCode}');
-    print('Assign response body: ${response.body}');
-
-    if (response.statusCode == 200) {
-      await fetchOrders(); // 🔥 refresh state
-    } else {
-      _errorMessage =
-          'Failed to assign delivery boy (${response.statusCode}): ${response.body}';
-      notifyListeners();
-    }
-  } catch (e) {
-    _errorMessage = 'Error assigning delivery boy: $e';
-    notifyListeners();
+  if (response.statusCode == 200) {
+    await fetchOrders();
   }
 }
-
 
   // ================= CLEAR ERROR (OPTIONAL) =================
   void clearError() {
