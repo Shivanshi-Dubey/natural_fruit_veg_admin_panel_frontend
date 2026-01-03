@@ -175,70 +175,75 @@ if (order.status == 'accepted')
   }
 
   /// ASSIGN DELIVERY BOY DIALOG
-  Future<void> _showAssignDialog(
-    BuildContext context,
-    OrderProvider provider,
-    String orderId,
-  ) async {
-    DeliveryBoy? selected;
-    final List<DeliveryBoy> boys = await _fetchDeliveryBoys();
+Future<void> _showAssignDialog(
+  BuildContext context,
+  OrderProvider provider,
+  String orderId,
+) async {
+  final List<DeliveryBoy> boys = await _fetchDeliveryBoys();
+  DeliveryBoy? selected;
 
-    if (!context.mounted) return;
+  if (!context.mounted) return;
 
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Assign Delivery Boy'),
-          content: boys.isEmpty
-              ? const Text('No delivery boys available')
-              : StatefulBuilder(
-                  builder: (context, setState) {
-                    return DropdownButton<DeliveryBoy>(
-                      isExpanded: true,
-                      value: selected,
-                      hint: const Text('Select delivery boy'),
-                      items: boys.map((b) {
-                        return DropdownMenuItem<DeliveryBoy>(
-                          value: b,
-                          child: Text('${b.name} (${b.phone})'),
+  await showDialog(
+    context: context,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Assign Delivery Boy'),
+
+            content: boys.isEmpty
+                ? const Text('No delivery boys available')
+                : DropdownButton<DeliveryBoy>(
+                    isExpanded: true,
+                    value: selected,
+                    hint: const Text('Select delivery boy'),
+                    items: boys.map((b) {
+                      return DropdownMenuItem<DeliveryBoy>(
+                        value: b,
+                        child: Text('${b.name} (${b.phone})'),
+                      );
+                    }).toList(),
+                    onChanged: (DeliveryBoy? val) {
+                      setState(() {
+                        selected = val; // ✅ rebuilds whole dialog
+                      });
+                    },
+                  ),
+
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+
+              ElevatedButton(
+                onPressed: selected == null
+                    ? null
+                    : () async {
+                        debugPrint(
+                            'Selected delivery boy id: ${selected!.id}');
+
+                        await provider.assignDeliveryBoy(
+                          orderId,
+                          selected!.id,
                         );
-                      }).toList(),
-                      onChanged: (DeliveryBoy? val) {
-                        setState(() {
-                          selected = val;
-                        });
+
+                        await provider.fetchOrders(); // refresh admin UI
+
+                        if (context.mounted) Navigator.pop(context);
                       },
-                    );
-                  },
-                ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-         ElevatedButton(
-  onPressed: selected == null
-      ? null
-      : () async {
-          // 🔥 FORCE LOG
-          debugPrint('Selected delivery boy id: ${selected!.id}');
-
-          await provider.assignDeliveryBoy(
-            orderId,
-            selected!.id,
+                child: const Text('Assign'),
+              ),
+            ],
           );
-
-          if (context.mounted) Navigator.pop(context);
         },
-  child: const Text('Assign'),
-),
+      );
+    },
+  );
+}
 
-          ],
-        );
-      },
-    );
-  }
 
   /// FETCH DELIVERY BOYS
   Future<List<DeliveryBoy>> _fetchDeliveryBoys() async {
