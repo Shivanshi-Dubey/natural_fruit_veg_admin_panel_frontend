@@ -72,25 +72,33 @@ class OrderProvider with ChangeNotifier {
   /// API: PUT /api/orders/admin/:id
   /// ✅ deliveryBoyId REQUIRED
 Future<void> assignDeliveryBoy(String orderId, String deliveryBoyId) async {
+  debugPrint('🚀 ASSIGN API CALLED');
+  debugPrint('OrderId: $orderId');
+  debugPrint('DeliveryBoyId: $deliveryBoyId');
+
+  final url =
+      'https://naturalfruitveg.com/api/orders/admin/assign/$orderId';
+
+  debugPrint('URL: $url');
+
   final response = await http.put(
-    Uri.parse(
-      'https://naturalfruitveg.com/api/orders/admin/assign/$orderId',
-    ),
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    Uri.parse(url),
+    headers: {'Content-Type': 'application/json'},
     body: jsonEncode({
       'deliveryBoyId': deliveryBoyId,
     }),
   );
 
-  debugPrint('ASSIGN STATUS: ${response.statusCode}');
-  debugPrint('ASSIGN BODY: ${response.body}');
+  debugPrint('STATUS CODE: ${response.statusCode}');
+  debugPrint('BODY: ${response.body}');
 
   if (response.statusCode == 200) {
     await fetchOrders();
+  } else {
+    throw Exception(response.body);
   }
 }
+
 
   // ================= CLEAR ERROR (OPTIONAL) =================
   void clearError() {
