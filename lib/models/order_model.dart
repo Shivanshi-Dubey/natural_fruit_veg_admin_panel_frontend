@@ -24,7 +24,7 @@ class Order {
   final String customerName;
   final List<OrderItem> items;
   final double deliveryCharge;
-  final String orderStatus;
+  final String status;
   final String paymentStatus;
   final DateTime createdAt;
   final String? deliveryBoyName;
@@ -35,7 +35,7 @@ class Order {
     required this.customerName,
     required this.items,
     required this.deliveryCharge,
-    required this.orderStatus,
+    required this.status,
     required this.paymentStatus,
     required this.createdAt,
     this.deliveryBoyName,
@@ -74,7 +74,7 @@ class Order {
       customerName: resolvedCustomerName,
       items: productsJson.map((e) => OrderItem.fromJson(e)).toList(),
       deliveryCharge: (json['deliveryCharge'] ?? 0).toDouble(),
-      orderStatus: (json['orderStatus'] ?? 'placed') as String,
+      status: (json['status'] ?? 'placed') as String,
       paymentStatus: (json['paymentStatus'] ?? 'pending') as String,
       createdAt: createdAtRaw != null
           ? DateTime.parse(createdAtRaw as String)
@@ -90,8 +90,5 @@ class Order {
 
   /// Total including delivery charge (used by dashboard)
   double get totalPrice => itemsTotal + deliveryCharge;
-
-  /// Backwards compatible field used in older widgets
-  String get status => orderStatus;
 }
 

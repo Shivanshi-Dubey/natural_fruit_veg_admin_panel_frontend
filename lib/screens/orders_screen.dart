@@ -43,7 +43,7 @@ class OrdersScreen extends StatelessWidget {
                         '₹${order.totalPrice.toStringAsFixed(2)} • ${order.paymentStatus}',
                       ),
                       trailing: Chip(
-                        label: Text(order.orderStatus),
+                        label: Text(order.status),
                       ),
                     );
                   },
