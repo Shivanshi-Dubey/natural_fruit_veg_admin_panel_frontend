@@ -76,13 +76,14 @@ class OrderProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.put(
-        Uri.parse('$baseUrl/$orderId'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'deliveryBoyId': deliveryBoyId,
-        }),
-      );
+    final response = await http.put(
+  Uri.parse('$baseUrl/assign/$orderId'), // 🔥 FIX HERE
+  headers: {'Content-Type': 'application/json'},
+  body: jsonEncode({
+    'deliveryBoyId': deliveryBoyId,
+  }),
+);
+
 
       if (response.statusCode == 200) {
         await fetchOrders();
