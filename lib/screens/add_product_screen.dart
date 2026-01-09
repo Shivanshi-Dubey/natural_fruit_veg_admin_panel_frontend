@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/product_model.dart';
 import '../providers/product_provider.dart';
@@ -14,6 +15,7 @@ class AddProductScreen extends StatefulWidget {
 
 class _AddProductScreenState extends State<AddProductScreen> {
   final _formKey = GlobalKey<FormState>();
+  final FocusNode _focusNode = FocusNode();
 
   late String _name;
   late double _price;
@@ -35,11 +37,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _stock = widget.product?.stock ?? 10;
   }
 
-  void _saveForm() async {
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveForm() async {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
 
-    // ✅ AUTO DISCOUNT CALCULATION
     final int discount =
         _mrp > _price ? (((_mrp - _price) / _mrp) * 100).round() : 0;
 
@@ -68,37 +75,78 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.product == null ? 'Add Product' : 'Edit Product'),
-        backgroundColor: Colors.green,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              _field('Product Name', _name, (v) => _name = v!),
-              _field('Selling Price', _price.toString(),
-                  (v) => _price = double.parse(v!), isNumber: true),
-              _field('MRP', _mrp.toString(),
-                  (v) => _mrp = double.parse(v!), isNumber: true),
-              _field('Unit (e.g. 250 g / 1 kg / 6 pcs)', _unit,
-                  (v) => _unit = v!),
-              _field('Image URL', _imagePath, (v) => _imagePath = v!),
-              _field('Category', _category, (v) => _category = v!),
-              _field('Stock', _stock.toString(),
-                  (v) => _stock = int.parse(v!), isNumber: true),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _saveForm,
-                style:
-                    ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                child:
-                    Text(widget.product == null ? 'Add Product' : 'Update'),
-              ),
-            ],
+    return RawKeyboardListener(
+      focusNode: _focusNode,
+      autofocus: true,
+      onKey: (RawKeyEvent event) {
+        if (event is RawKeyDownEvent) {
+          // ENTER → SAVE
+          if (event.logicalKey == LogicalKeyboardKey.enter) {
+            _saveForm();
+          }
+
+          // ESC → CANCEL / BACK
+          if (event.logicalKey == LogicalKeyboardKey.escape) {
+            Navigator.pop(context);
+          }
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.product == null ? 'Add Product' : 'Edit Product'),
+          backgroundColor: Colors.green,
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              children: [
+                _field('Product Name', _name, (v) => _name = v!),
+                _field(
+                  'Selling Price',
+                  _price.toString(),
+                  (v) => _price = double.parse(v!),
+                  isNumber: true,
+                ),
+                _field(
+                  'MRP',
+                  _mrp.toString(),
+                  (v) => _mrp = double.parse(v!),
+                  isNumber: true,
+                ),
+                _field(
+                  'Unit (e.g. 250 g / 1 kg / 6 pcs)',
+                  _unit,
+                  (v) => _unit = v!,
+                ),
+                _field('Image URL', _imagePath, (v) => _imagePath = v!),
+                _field('Category', _category, (v) => _category = v!),
+                _field(
+                  'Stock',
+                  _stock.toString(),
+                  (v) => _stock = int.parse(v!),
+                  isNumber: true,
+                ),
+                const SizedBox(height: 24),
+
+                // BUTTON STILL EXISTS (mouse users)
+                ElevatedButton(
+                  onPressed: _saveForm,
+                  style:
+                      ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                  child:
+                      Text(widget.product == null ? 'Add Product' : 'Update'),
+                ),
+
+                const SizedBox(height: 8),
+                const Text(
+                  "Tip: Press ENTER to save • ESC to cancel",
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ),
       ),
