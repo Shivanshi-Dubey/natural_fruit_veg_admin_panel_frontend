@@ -6,7 +6,6 @@ import '../providers/product_provider.dart';
 
 class AddProductScreen extends StatefulWidget {
   final Product? product;
-
   const AddProductScreen({super.key, this.product});
 
   @override
@@ -25,6 +24,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
   late String _category;
   late int _stock;
 
+  // Controllers for numeric keyboard handling
+  late TextEditingController _priceCtrl;
+  late TextEditingController _mrpCtrl;
+  late TextEditingController _stockCtrl;
+
   @override
   void initState() {
     super.initState();
@@ -35,15 +39,25 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _imagePath = widget.product?.imagePath ?? '';
     _category = widget.product?.category ?? '';
     _stock = widget.product?.stock ?? 10;
+
+    _priceCtrl = TextEditingController(text: _price.toString());
+    _mrpCtrl = TextEditingController(text: _mrp.toString());
+    _stockCtrl = TextEditingController(text: _stock.toString());
   }
 
   @override
   void dispose() {
     _focusNode.dispose();
+    _priceCtrl.dispose();
+    _mrpCtrl.dispose();
+    _stockCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _saveForm() async {
+  /* =========================
+     💾 SAVE FORM
+  ========================= */
+  void _saveForm() async {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
 
@@ -62,15 +76,62 @@ class _AddProductScreenState extends State<AddProductScreen> {
       stock: _stock,
     );
 
-    final provider = Provider.of<ProductProvider>(context, listen: false);
+    final provider = context.read<ProductProvider>();
 
-    if (widget.product == null) {
-      await provider.addProduct(product, context);
-    } else {
-      await provider.updateProduct(product, context);
-    }
+    widget.product == null
+        ? await provider.addProduct(product, context)
+        : await provider.updateProduct(product, context);
 
     if (mounted) Navigator.pop(context);
+  }
+
+  /* =========================
+     ⌨️ KEYBOARD HANDLER
+  ========================= */
+  void _handleKey(RawKeyEvent event) {
+    if (event is! RawKeyDownEvent) return;
+
+    // ESC → Cancel
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      Navigator.pop(context);
+    }
+
+    // ENTER → Save
+    if (event.logicalKey == LogicalKeyboardKey.enter) {
+      _saveForm();
+    }
+
+    // CTRL + S → Save
+    if (event.isControlPressed &&
+        event.logicalKey == LogicalKeyboardKey.keyS) {
+      _saveForm();
+    }
+  }
+
+  /* =========================
+     🔢 NUMERIC KEY CONTROL
+  ========================= */
+  void _handleNumericKey(
+    RawKeyEvent event,
+    TextEditingController controller,
+    void Function(num) onChanged, {
+    num step = 1,
+  }) {
+    if (event is! RawKeyDownEvent) return;
+
+    num value = num.tryParse(controller.text) ?? 0;
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      value += event.isControlPressed ? step * 10 : step;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      value -= event.isControlPressed ? step * 10 : step;
+      if (value < 0) value = 0;
+    }
+
+    controller.text = value.toString();
+    onChanged(value);
   }
 
   @override
@@ -78,19 +139,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     return RawKeyboardListener(
       focusNode: _focusNode,
       autofocus: true,
-      onKey: (RawKeyEvent event) {
-        if (event is RawKeyDownEvent) {
-          // ENTER → SAVE
-          if (event.logicalKey == LogicalKeyboardKey.enter) {
-            _saveForm();
-          }
-
-          // ESC → CANCEL / BACK
-          if (event.logicalKey == LogicalKeyboardKey.escape) {
-            Navigator.pop(context);
-          }
-        }
-      },
+      onKey: _handleKey,
       child: Scaffold(
         appBar: AppBar(
           title: Text(widget.product == null ? 'Add Product' : 'Edit Product'),
@@ -102,48 +151,42 @@ class _AddProductScreenState extends State<AddProductScreen> {
             key: _formKey,
             child: ListView(
               children: [
-                _field('Product Name', _name, (v) => _name = v!),
-                _field(
-                  'Selling Price',
-                  _price.toString(),
-                  (v) => _price = double.parse(v!),
-                  isNumber: true,
+                _textField('Product Name', _name, (v) => _name = v!),
+
+                _numericField(
+                  label: 'Selling Price',
+                  controller: _priceCtrl,
+                  onChanged: (v) => _price = v.toDouble(),
                 ),
-                _field(
-                  'MRP',
-                  _mrp.toString(),
-                  (v) => _mrp = double.parse(v!),
-                  isNumber: true,
+
+                _numericField(
+                  label: 'MRP',
+                  controller: _mrpCtrl,
+                  onChanged: (v) => _mrp = v.toDouble(),
                 ),
-                _field(
-                  'Unit (e.g. 250 g / 1 kg / 6 pcs)',
-                  _unit,
-                  (v) => _unit = v!,
+
+                _textField('Unit (250 g / 1 kg / 6 pcs)', _unit,
+                    (v) => _unit = v!),
+
+                _textField('Image URL', _imagePath,
+                    (v) => _imagePath = v!),
+
+                _textField('Category', _category,
+                    (v) => _category = v!),
+
+                _numericField(
+                  label: 'Stock',
+                  controller: _stockCtrl,
+                  onChanged: (v) => _stock = v.toInt(),
                 ),
-                _field('Image URL', _imagePath, (v) => _imagePath = v!),
-                _field('Category', _category, (v) => _category = v!),
-                _field(
-                  'Stock',
-                  _stock.toString(),
-                  (v) => _stock = int.parse(v!),
-                  isNumber: true,
-                ),
+
                 const SizedBox(height: 24),
 
-                // BUTTON STILL EXISTS (mouse users)
                 ElevatedButton(
                   onPressed: _saveForm,
-                  style:
-                      ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                  child:
-                      Text(widget.product == null ? 'Add Product' : 'Update'),
-                ),
-
-                const SizedBox(height: 8),
-                const Text(
-                  "Tip: Press ENTER to save • ESC to cancel",
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                  textAlign: TextAlign.center,
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green),
+                  child: Text(widget.product == null ? 'Add Product' : 'Update'),
                 ),
               ],
             ),
@@ -153,19 +196,45 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 
-  Widget _field(String label, String value, Function(String?) onSave,
-      {bool isNumber = false}) {
+  /* =========================
+     🧩 FIELD HELPERS
+  ========================= */
+  Widget _textField(
+      String label, String value, Function(String?) onSave) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: TextFormField(
         initialValue: value,
-        keyboardType:
-            isNumber ? TextInputType.number : TextInputType.text,
         validator: (v) => v == null || v.isEmpty ? 'Required' : null,
         onSaved: onSave,
         decoration: InputDecoration(
           labelText: label,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
+    );
+  }
+
+  Widget _numericField({
+    required String label,
+    required TextEditingController controller,
+    required Function(num) onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: RawKeyboardListener(
+        focusNode: FocusNode(),
+        onKey: (e) =>
+            _handleNumericKey(e, controller, onChanged),
+        child: TextFormField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+          decoration: InputDecoration(
+            labelText: '$label (↑ ↓ | CTRL+↑ ↓)',
+            border:
+                OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
         ),
       ),
     );
