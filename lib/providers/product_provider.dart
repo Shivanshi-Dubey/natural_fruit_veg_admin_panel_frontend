@@ -44,7 +44,7 @@ class ProductProvider with ChangeNotifier {
   }
 
   /* =========================
-     ➕ ADD PRODUCT
+     ➕ ADD PRODUCT (FULL FIELDS)
   ========================= */
   Future<void> addProduct(Product product, BuildContext context) async {
     try {
@@ -54,6 +54,9 @@ class ProductProvider with ChangeNotifier {
         body: jsonEncode({
           'name': product.name,
           'price': product.price,
+          'mrp': product.mrp,
+          'discount': product.discount,
+          'unit': product.unit,
           'imagePath': product.imagePath,
           'category': product.category,
           'stock': product.stock,
@@ -64,7 +67,10 @@ class ProductProvider with ChangeNotifier {
         await fetchProducts();
         _showSnackBar(context, '✅ Product added successfully');
       } else {
-        _showSnackBar(context, '❌ Failed to add product');
+        _showSnackBar(
+          context,
+          '❌ Failed to add product (${response.statusCode})',
+        );
       }
     } catch (e) {
       _showSnackBar(context, '⚠️ Error adding product: $e');
@@ -72,7 +78,7 @@ class ProductProvider with ChangeNotifier {
   }
 
   /* =========================
-     ✏️ UPDATE PRODUCT (STOCK FIX)
+     ✏️ UPDATE PRODUCT (FINAL FIX)
   ========================= */
   Future<void> updateProduct(Product product, BuildContext context) async {
     try {
@@ -81,22 +87,18 @@ class ProductProvider with ChangeNotifier {
         return;
       }
 
-      // Optimistically update the UI immediately
-      final index = _products.indexWhere((p) => p.id == product.id);
-      if (index != -1) {
-        _products[index] = product;
-        notifyListeners();
-      }
-
       final requestBody = {
         'name': product.name,
         'price': product.price,
+        'mrp': product.mrp,
+        'discount': product.discount,
+        'unit': product.unit,
         'imagePath': product.imagePath,
         'category': product.category,
-        'stock': product.stock, // ✅ Send stock explicitly (including 0)
+        'stock': product.stock,
       };
 
-      print('🔄 Updating product ${product.id} with stock: ${product.stock}');
+      print('🔄 Updating product ${product.id}');
       print('📤 Request body: $requestBody');
 
       final response = await http.put(
@@ -109,26 +111,15 @@ class ProductProvider with ChangeNotifier {
       print('📥 Response body: ${response.body}');
 
       if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        final updatedStock = responseData['product']?['stock'] ?? responseData['stock'];
-        print('✅ Updated product from server - Stock: $updatedStock');
-        print('✅ Full response: $responseData');
-        
-        // Refresh from server to ensure consistency
         await fetchProducts();
-        _showSnackBar(context, '✅ Product updated successfully (Stock: $updatedStock)');
+        _showSnackBar(context, '✅ Product updated successfully');
       } else {
-        // Revert optimistic update on error
-        if (index != -1) {
-          await fetchProducts(); // Reload to revert
-        }
-        final errorBody = response.body;
         _showSnackBar(
-            context, '❌ Failed to update product (${response.statusCode}): $errorBody');
+          context,
+          '❌ Update failed (${response.statusCode})',
+        );
       }
     } catch (e) {
-      // Revert optimistic update on error
-      await fetchProducts(); // Reload to revert
       _showSnackBar(context, '⚠️ Error updating product: $e');
     }
   }
@@ -147,8 +138,7 @@ class ProductProvider with ChangeNotifier {
         notifyListeners();
         _showSnackBar(context, '🗑 Product deleted');
       } else {
-        _showSnackBar(
-            context, '❌ Failed to delete product');
+        _showSnackBar(context, '❌ Failed to delete product');
       }
     } catch (e) {
       _showSnackBar(context, '⚠️ Error deleting product: $e');
