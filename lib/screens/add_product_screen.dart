@@ -17,15 +17,19 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   late String _name;
   late double _price;
+  late double _mrp;
+  late String _unit;
   late String _imagePath;
   late String _category;
-  late int _stock; // ✅ STOCK, not quantity
+  late int _stock;
 
   @override
   void initState() {
     super.initState();
     _name = widget.product?.name ?? '';
     _price = widget.product?.price ?? 0;
+    _mrp = widget.product?.mrp ?? 0;
+    _unit = widget.product?.unit ?? '1 pc';
     _imagePath = widget.product?.imagePath ?? '';
     _category = widget.product?.category ?? '';
     _stock = widget.product?.stock ?? 10;
@@ -35,13 +39,20 @@ class _AddProductScreenState extends State<AddProductScreen> {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
 
+    // ✅ AUTO DISCOUNT CALCULATION
+    final int discount =
+        _mrp > _price ? (((_mrp - _price) / _mrp) * 100).round() : 0;
+
     final product = Product(
       id: widget.product?.id ?? '',
       name: _name,
       price: _price,
+      mrp: _mrp,
+      unit: _unit,
+      discount: discount,
       imagePath: _imagePath,
       category: _category,
-      stock: _stock, // ✅ correct
+      stock: _stock,
     );
 
     final provider = Provider.of<ProductProvider>(context, listen: false);
@@ -69,8 +80,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
           child: ListView(
             children: [
               _field('Product Name', _name, (v) => _name = v!),
-              _field('Price', _price.toString(),
+              _field('Selling Price', _price.toString(),
                   (v) => _price = double.parse(v!), isNumber: true),
+              _field('MRP', _mrp.toString(),
+                  (v) => _mrp = double.parse(v!), isNumber: true),
+              _field('Unit (e.g. 250 g / 1 kg / 6 pcs)', _unit,
+                  (v) => _unit = v!),
               _field('Image URL', _imagePath, (v) => _imagePath = v!),
               _field('Category', _category, (v) => _category = v!),
               _field('Stock', _stock.toString(),
@@ -78,8 +93,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _saveForm,
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                child: Text(widget.product == null ? 'Add Product' : 'Update'),
+                style:
+                    ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                child:
+                    Text(widget.product == null ? 'Add Product' : 'Update'),
               ),
             ],
           ),
