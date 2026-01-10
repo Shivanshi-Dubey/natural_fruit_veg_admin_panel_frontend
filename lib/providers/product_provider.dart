@@ -44,7 +44,7 @@ class ProductProvider with ChangeNotifier {
   }
 
   /* =========================
-     ➕ ADD PRODUCT (FULL FIELDS)
+     ➕ ADD PRODUCT (WITH SUBTITLE)
   ========================= */
   Future<void> addProduct(Product product, BuildContext context) async {
     try {
@@ -53,6 +53,7 @@ class ProductProvider with ChangeNotifier {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'name': product.name,
+          'subtitle': product.subtitle, // ✅ NEW
           'price': product.price,
           'mrp': product.mrp,
           'discount': product.discount,
@@ -78,7 +79,7 @@ class ProductProvider with ChangeNotifier {
   }
 
   /* =========================
-     ✏️ UPDATE PRODUCT (FINAL FIX)
+     ✏️ UPDATE PRODUCT (WITH SUBTITLE)
   ========================= */
   Future<void> updateProduct(Product product, BuildContext context) async {
     try {
@@ -89,6 +90,7 @@ class ProductProvider with ChangeNotifier {
 
       final requestBody = {
         'name': product.name,
+        'subtitle': product.subtitle, // ✅ NEW
         'price': product.price,
         'mrp': product.mrp,
         'discount': product.discount,

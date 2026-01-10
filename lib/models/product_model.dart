@@ -5,6 +5,9 @@ class Product {
   final String id;
   final String name;
 
+  // 🆕 Subtitle (varieties like Kashmir | Fuji | Shimla)
+  final String subtitle;
+
   // 🔹 Pricing
   final double price;   // selling price
   final double mrp;     // original price
@@ -20,6 +23,7 @@ class Product {
   const Product({
     required this.id,
     required this.name,
+    this.subtitle = '', // ✅ NEW (optional, safe)
     required this.price,
     required this.mrp,
     required this.unit,
@@ -32,6 +36,7 @@ class Product {
   Product copyWith({
     String? id,
     String? name,
+    String? subtitle,
     double? price,
     double? mrp,
     int? discount,
@@ -43,6 +48,7 @@ class Product {
     return Product(
       id: id ?? this.id,
       name: name ?? this.name,
+      subtitle: subtitle ?? this.subtitle,
       price: price ?? this.price,
       mrp: mrp ?? this.mrp,
       discount: discount ?? this.discount,
@@ -60,6 +66,7 @@ class Product {
     return Product(
       id: (json['_id'] ?? json['id'] ?? '').toString(),
       name: json['name'] ?? '',
+      subtitle: json['subtitle'] ?? '', // ✅ NEW
       price: parsedPrice,
       mrp: (json['mrp'] as num?)?.toDouble() ?? parsedPrice,
       discount: json['discount'] ?? 0,
@@ -72,6 +79,7 @@ class Product {
 
   Map<String, dynamic> toJson() => {
         'name': name,
+        'subtitle': subtitle, // ✅ NEW
         'price': price,
         'mrp': mrp,
         'discount': discount,

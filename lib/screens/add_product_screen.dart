@@ -17,6 +17,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final FocusNode _pageFocus = FocusNode();
 
   late String _name;
+  late String _subtitle; // ✅ NEW
   late double _price;
   late double _mrp;
   late String _unit;
@@ -33,6 +34,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     super.initState();
 
     _name = widget.product?.name ?? '';
+    _subtitle = widget.product?.subtitle ?? ''; // ✅
     _price = widget.product?.price ?? 0;
     _mrp = widget.product?.mrp ?? 0;
     _unit = widget.product?.unit ?? '1 pc';
@@ -67,6 +69,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     final product = Product(
       id: widget.product?.id ?? '',
       name: _name,
+      subtitle: _subtitle, // ✅
       price: _price,
       mrp: _mrp,
       unit: _unit,
@@ -106,10 +109,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
      🔢 NUMERIC CONTROL
   ========================= */
   void _numericAdjust(
-      RawKeyEvent e,
-      TextEditingController ctrl,
-      void Function(num) onChanged,
-      {num step = 1}) {
+    RawKeyEvent e,
+    TextEditingController ctrl,
+    void Function(num) onChanged, {
+    num step = 1,
+  }) {
     if (e is! RawKeyDownEvent) return;
 
     num value = num.tryParse(ctrl.text) ?? 0;
@@ -145,10 +149,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
               constraints: const BoxConstraints(maxWidth: 760),
               child: Card(
                 elevation: 6,
+                margin: const EdgeInsets.all(24),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                margin: const EdgeInsets.all(24),
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Form(
@@ -157,6 +161,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       children: [
                         _textField('Product Name', _name,
                             (v) => _name = v!),
+
+                        _textField(
+                          'Subtitle / Variety (e.g. Kashmir • Fuji • Shimla)',
+                          _subtitle,
+                          (v) => _subtitle = v!,
+                          required: false,
+                        ),
 
                         _numericField(
                           'Selling Price',
@@ -230,12 +241,18 @@ class _AddProductScreenState extends State<AddProductScreen> {
      🧩 FIELD HELPERS
   ========================= */
   Widget _textField(
-      String label, String value, Function(String?) onSave) {
+    String label,
+    String value,
+    Function(String?) onSave, {
+    bool required = true,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: TextFormField(
         initialValue: value,
-        validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+        validator: required
+            ? (v) => v == null || v.isEmpty ? 'Required' : null
+            : null,
         onSaved: onSave,
         decoration: InputDecoration(
           labelText: label,
@@ -246,9 +263,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
   }
 
   Widget _numericField(
-      String label,
-      TextEditingController ctrl,
-      Function(num) onChanged) {
+    String label,
+    TextEditingController ctrl,
+    Function(num) onChanged,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: RawKeyboardListener(
