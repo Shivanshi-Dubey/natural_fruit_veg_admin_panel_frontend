@@ -11,6 +11,7 @@ import 'customers_screen.dart';
 import 'reports_screen.dart';
 import 'settings_screen.dart';
 import 'dead_products_screen.dart';
+import 'low_stock_products_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -245,18 +246,22 @@ InkWell(
     ),
 
     Card(
-      child: ListTile(
-        leading: const Icon(Icons.inventory, color: Colors.orange),
-        title: const Text('Low Stock Products'),
-        subtitle: const Text('Products running out of stock'),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Coming next 🚀")),
-          );
-        },
-      ),
-    ),
+  child: ListTile(
+    leading: const Icon(Icons.inventory, color: Colors.orange),
+    title: const Text('Low Stock Products'),
+    subtitle: const Text('Products running out of stock'),
+    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const LowStockProductsScreen(),
+        ),
+      );
+    },
+  ),
+),
+
 
     const SizedBox(height: 30),
 
