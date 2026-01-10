@@ -10,6 +10,7 @@ import 'orders_screen.dart';
 import 'customers_screen.dart';
 import 'reports_screen.dart';
 import 'settings_screen.dart';
+import 'dead_products_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -217,6 +218,49 @@ InkWell(
                       ),
                       const SizedBox(height: 30),
 
+                      /// ======================
+    /// 🚨 ADMIN ANALYTICS
+    /// ======================
+    const Text(
+      'Admin Analytics',
+      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    ),
+    const SizedBox(height: 12),
+
+    Card(
+      child: ListTile(
+        leading: const Icon(Icons.warning, color: Colors.red),
+        title: const Text('Dead Products'),
+        subtitle: const Text('Stock available but never sold'),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const DeadProductsScreen(),
+            ),
+          );
+        },
+      ),
+    ),
+
+    Card(
+      child: ListTile(
+        leading: const Icon(Icons.inventory, color: Colors.orange),
+        title: const Text('Low Stock Products'),
+        subtitle: const Text('Products running out of stock'),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Coming next 🚀")),
+          );
+        },
+      ),
+    ),
+
+    const SizedBox(height: 30),
+
+
                       // Top Selling Products
                       const Text(
                         'Top Selling Products',
@@ -317,17 +361,6 @@ class AdminDrawer extends StatelessWidget {
               'Admin Panel',
               style: TextStyle(color: Colors.white, fontSize: 20),
             ),
-          ),
-          _drawerItem(
-            context,
-            Icons.dashboard,
-            'Dashboard',
-            () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const DashboardScreen()),
-              );
-            },
           ),
           _drawerItem(
             context,
