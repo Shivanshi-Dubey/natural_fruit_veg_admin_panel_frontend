@@ -35,12 +35,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
           body: provider.isLoading
               ? const Center(child: CircularProgressIndicator())
               : provider.errorMessage != null
-                  ? Center(
-                      child: Text(
-                        provider.errorMessage!,
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                    )
+                  ? _errorView(provider.errorMessage!)
                   : RefreshIndicator(
                       onRefresh: provider.fetchOrders,
                       child: provider.orders.isEmpty
@@ -48,22 +43,32 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
                           : ListView.builder(
                               padding: const EdgeInsets.all(12),
                               itemCount: provider.orders.length,
-                              itemBuilder: (context, index) {
-                                return _OrderTile(
-                                  order: provider.orders[index],
-                                );
-                              },
+                              itemBuilder: (_, i) =>
+                                  _OrderCard(order: provider.orders[i]),
                             ),
                     ),
         );
       },
     );
   }
+
+  Widget _errorView(String message) {
+    return Center(
+      child: Text(
+        message,
+        style: const TextStyle(color: Colors.red),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
 }
 
-class _OrderTile extends StatelessWidget {
+/* ============================================================
+   🧾 ORDER CARD
+============================================================ */
+class _OrderCard extends StatelessWidget {
   final Order order;
-  const _OrderTile({required this.order});
+  const _OrderCard({required this.order});
 
   Color _statusColor(String status) {
     switch (status) {
@@ -88,11 +93,11 @@ class _OrderTile extends StatelessWidget {
     final provider = context.read<OrderProvider>();
 
     return Card(
-      elevation: 3,
+      elevation: 4,
       margin: const EdgeInsets.symmetric(vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -103,8 +108,8 @@ class _OrderTile extends StatelessWidget {
                 Text(
                   'Order #${order.id.substring(order.id.length - 6)}',
                   style: const TextStyle(
-                    fontWeight: FontWeight.bold,
                     fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
                 Chip(
@@ -133,7 +138,7 @@ class _OrderTile extends StatelessWidget {
             Text(
               'Payment: ${order.paymentStatus}',
               style: TextStyle(
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
                 color: order.paymentStatus == 'paid'
                     ? Colors.green
                     : Colors.orange,
@@ -145,47 +150,46 @@ class _OrderTile extends StatelessWidget {
               'Delivery Boy: ${order.deliveryBoyName ?? 'Not assigned'}',
             ),
 
-            const SizedBox(height: 10),
+            const Divider(height: 24),
 
-            /// 📦 ORDER ITEMS
+            /// 📦 ITEMS
             const Text(
-              'Items:',
+              'Ordered Items',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 4),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: order.items.map((item) {
-                return Text('• ${item.name} × ${item.quantity}');
-              }).toList(),
+            const SizedBox(height: 6),
+            ...order.items.map(
+              (i) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text('• ${i.name} × ${i.quantity}'),
+              ),
             ),
 
             const Divider(height: 24),
 
-            /// ACTION BUTTONS
+            /// ACTIONS
             Wrap(
-              spacing: 10,
+              spacing: 12,
               children: [
                 if (order.status == 'placed')
-                  ElevatedButton(
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.check),
+                    label: const Text('Accept Order'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade700,
+                    ),
                     onPressed: () async {
                       await provider.acceptOrder(order.id);
                       await provider.fetchOrders();
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade700,
-                    ),
-                    child: const Text('Accept Order'),
                   ),
 
                 if (order.status == 'accepted')
-                  OutlinedButton(
-                    onPressed: () => _showAssignDialog(
-                      context,
-                      provider,
-                      order.id,
-                    ),
-                    child: const Text('Assign Delivery Boy'),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.delivery_dining),
+                    label: const Text('Assign Delivery Boy'),
+                    onPressed: () =>
+                        _showAssignDialog(context, provider, order.id),
                   ),
               ],
             ),
@@ -195,7 +199,9 @@ class _OrderTile extends StatelessWidget {
     );
   }
 
-  /// 👤 ASSIGN DELIVERY BOY
+  /* ============================================================
+     👤 ASSIGN DELIVERY BOY
+  ============================================================ */
   Future<void> _showAssignDialog(
     BuildContext context,
     OrderProvider provider,
@@ -219,12 +225,14 @@ class _OrderTile extends StatelessWidget {
                       isExpanded: true,
                       value: selected,
                       hint: const Text('Select delivery boy'),
-                      items: boys.map((b) {
-                        return DropdownMenuItem(
-                          value: b,
-                          child: Text('${b.name} (${b.phone})'),
-                        );
-                      }).toList(),
+                      items: boys
+                          .map(
+                            (b) => DropdownMenuItem(
+                              value: b,
+                              child: Text('${b.name} (${b.phone})'),
+                            ),
+                          )
+                          .toList(),
                       onChanged: (val) => setState(() => selected = val),
                     ),
               actions: [
@@ -253,7 +261,9 @@ class _OrderTile extends StatelessWidget {
     );
   }
 
-  /// 🌐 FETCH DELIVERY BOYS
+  /* ============================================================
+     🌐 FETCH DELIVERY BOYS
+  ============================================================ */
   Future<List<DeliveryBoy>> _fetchDeliveryBoys() async {
     final res = await http.get(
       Uri.parse(
