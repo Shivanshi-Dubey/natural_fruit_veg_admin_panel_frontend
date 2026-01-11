@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
@@ -20,7 +19,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
   void initState() {
     super.initState();
     Future.microtask(
-      () => Provider.of<OrderProvider>(context, listen: false).fetchOrders(),
+      () => context.read<OrderProvider>().fetchOrders(),
     );
   }
 
@@ -28,32 +27,34 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
   Widget build(BuildContext context) {
     return Consumer<OrderProvider>(
       builder: (context, provider, _) {
-        if (provider.isLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (provider.errorMessage != null) {
-          return Center(
-            child: Text(
-              provider.errorMessage!,
-              style: const TextStyle(color: Colors.red),
-            ),
-          );
-        }
-
-        final orders = provider.orders;
-
         return Scaffold(
-          body: orders.isEmpty
-              ? const Center(child: Text('No orders found'))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: orders.length,
-                  itemBuilder: (context, index) {
-                    final order = orders[index];
-                    return _OrderTile(order: order);
-                  },
-                ),
+          appBar: AppBar(
+            title: const Text('Manage Orders'),
+            backgroundColor: Colors.green.shade700,
+          ),
+          body: provider.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : provider.errorMessage != null
+                  ? Center(
+                      child: Text(
+                        provider.errorMessage!,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: provider.fetchOrders,
+                      child: provider.orders.isEmpty
+                          ? const Center(child: Text('No orders found'))
+                          : ListView.builder(
+                              padding: const EdgeInsets.all(12),
+                              itemCount: provider.orders.length,
+                              itemBuilder: (context, index) {
+                                return _OrderTile(
+                                  order: provider.orders[index],
+                                );
+                              },
+                            ),
+                    ),
         );
       },
     );
@@ -62,11 +63,12 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
 
 class _OrderTile extends StatelessWidget {
   final Order order;
-
   const _OrderTile({required this.order});
 
   Color _statusColor(String status) {
     switch (status) {
+      case 'placed':
+        return Colors.grey;
       case 'accepted':
         return Colors.blue;
       case 'assigned':
@@ -83,13 +85,14 @@ class _OrderTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<OrderProvider>(context, listen: false);
+    final provider = context.read<OrderProvider>();
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 3,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -116,56 +119,74 @@ class _OrderTile extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Text('Customer: ${order.customerName}'),
-            const SizedBox(height: 4),
 
+            const SizedBox(height: 6),
             Text(
               'Total: ₹${order.totalPrice.toStringAsFixed(0)} '
-              '(Items: ₹${order.itemsTotal.toStringAsFixed(0)} + '
-              'Delivery: ₹${order.deliveryCharge.toStringAsFixed(0)})',
+              '(Items ₹${order.itemsTotal.toStringAsFixed(0)} + '
+              'Delivery ₹${order.deliveryCharge.toStringAsFixed(0)})',
             ),
 
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text(
               'Payment: ${order.paymentStatus}',
               style: TextStyle(
+                fontWeight: FontWeight.w500,
                 color: order.paymentStatus == 'paid'
                     ? Colors.green
                     : Colors.orange,
               ),
             ),
 
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text(
               'Delivery Boy: ${order.deliveryBoyName ?? 'Not assigned'}',
             ),
 
-            const Divider(height: 20),
+            const SizedBox(height: 10),
+
+            /// 📦 ORDER ITEMS
+            const Text(
+              'Items:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: order.items.map((item) {
+                return Text('• ${item.name} × ${item.quantity}');
+              }).toList(),
+            ),
+
+            const Divider(height: 24),
 
             /// ACTION BUTTONS
             Wrap(
-              spacing: 8,
+              spacing: 10,
               children: [
-            if (order.status == 'placed')
-  ElevatedButton(
-    onPressed: () async {
-      await provider.acceptOrder(order.id);
-      await provider.fetchOrders(); // 🔥 THIS LINE IS CRITICAL
-    },
-    style: ElevatedButton.styleFrom(
-      backgroundColor: Colors.green.shade700,
-    ),
-    child: const Text('Accept Order'),
-  ),
+                if (order.status == 'placed')
+                  ElevatedButton(
+                    onPressed: () async {
+                      await provider.acceptOrder(order.id);
+                      await provider.fetchOrders();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade700,
+                    ),
+                    child: const Text('Accept Order'),
+                  ),
 
-if (order.status == 'accepted')
-  OutlinedButton(
-    onPressed: () =>
-        _showAssignDialog(context, provider, order.id),
-    child: const Text('Assign Delivery Boy'),
-  ),
-
+                if (order.status == 'accepted')
+                  OutlinedButton(
+                    onPressed: () => _showAssignDialog(
+                      context,
+                      provider,
+                      order.id,
+                    ),
+                    child: const Text('Assign Delivery Boy'),
+                  ),
               ],
             ),
           ],
@@ -174,87 +195,74 @@ if (order.status == 'accepted')
     );
   }
 
-  /// ASSIGN DELIVERY BOY DIALOG
-Future<void> _showAssignDialog(
-  BuildContext context,
-  OrderProvider provider,
-  String orderId,
-) async {
-  final List<DeliveryBoy> boys = await _fetchDeliveryBoys();
-  DeliveryBoy? selected;
+  /// 👤 ASSIGN DELIVERY BOY
+  Future<void> _showAssignDialog(
+    BuildContext context,
+    OrderProvider provider,
+    String orderId,
+  ) async {
+    final boys = await _fetchDeliveryBoys();
+    DeliveryBoy? selected;
 
-  if (!context.mounted) return;
+    if (!context.mounted) return;
 
-  await showDialog(
-    context: context,
-    builder: (context) {
-      return StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            title: const Text('Assign Delivery Boy'),
-
-            content: boys.isEmpty
-                ? const Text('No delivery boys available')
-                : DropdownButton<DeliveryBoy>(
-                    isExpanded: true,
-                    value: selected,
-                    hint: const Text('Select delivery boy'),
-                    items: boys.map((b) {
-                      return DropdownMenuItem<DeliveryBoy>(
-                        value: b,
-                        child: Text('${b.name} (${b.phone})'),
-                      );
-                    }).toList(),
-                    onChanged: (DeliveryBoy? val) {
-                      setState(() {
-                        selected = val; // ✅ rebuilds whole dialog
-                      });
-                    },
-                  ),
-
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-
-              ElevatedButton(
-                onPressed: selected == null
-                    ? null
-                    : () async {
-                        debugPrint(
-                            'Selected delivery boy id: ${selected!.id}');
-
-                        await provider.assignDeliveryBoy(
-                          orderId,
-                          selected!.id,
+    await showDialog(
+      context: context,
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Assign Delivery Boy'),
+              content: boys.isEmpty
+                  ? const Text('No delivery boys available')
+                  : DropdownButton<DeliveryBoy>(
+                      isExpanded: true,
+                      value: selected,
+                      hint: const Text('Select delivery boy'),
+                      items: boys.map((b) {
+                        return DropdownMenuItem(
+                          value: b,
+                          child: Text('${b.name} (${b.phone})'),
                         );
+                      }).toList(),
+                      onChanged: (val) => setState(() => selected = val),
+                    ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: selected == null
+                      ? null
+                      : () async {
+                          await provider.assignDeliveryBoy(
+                            orderId,
+                            selected!.id,
+                          );
+                          await provider.fetchOrders();
+                          if (context.mounted) Navigator.pop(context);
+                        },
+                  child: const Text('Assign'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 
-                        await provider.fetchOrders(); // refresh admin UI
-
-                        if (context.mounted) Navigator.pop(context);
-                      },
-                child: const Text('Assign'),
-              ),
-            ],
-          );
-        },
-      );
-    },
-  );
-}
-
-
-  /// FETCH DELIVERY BOYS
+  /// 🌐 FETCH DELIVERY BOYS
   Future<List<DeliveryBoy>> _fetchDeliveryBoys() async {
-    final uri = Uri.parse(
-      'https://naturalfruitveg.com/api/delivery-boys?onlyAvailable=true',
+    final res = await http.get(
+      Uri.parse(
+        'https://naturalfruitveg.com/api/delivery-boys?onlyAvailable=true',
+      ),
     );
 
-    final response = await http.get(uri);
-
-    if (response.statusCode == 200) {
-      final List data = jsonDecode(response.body) as List;
+    if (res.statusCode == 200) {
+      final List data = jsonDecode(res.body);
       return data.map((e) => DeliveryBoy.fromJson(e)).toList();
     }
     return [];
