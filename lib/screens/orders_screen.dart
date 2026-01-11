@@ -1,7 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
 import '../models/order_model.dart';
+import '../models/delivery_boy.dart';
 import '../providers/order_provider.dart';
 
 class OrdersScreen extends StatelessWidget {
@@ -14,10 +17,9 @@ class OrdersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final orderProvider = Provider.of<OrderProvider>(context);
+    final orderProvider = context.watch<OrderProvider>();
     List<Order> orders = orderProvider.orders;
 
-    // 🔹 Filter only paid orders if required
     if (showOnlyPaid) {
       orders = orders.where((o) => o.paymentStatus == 'paid').toList();
     }
@@ -48,7 +50,7 @@ class OrdersScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // 🆔 ORDER ID + STATUS
+                            /// ORDER ID + STATUS
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -60,26 +62,22 @@ class OrdersScreen extends StatelessWidget {
                                   ),
                                 ),
                                 Chip(
-                                  label: Text(
-                                    order.status,
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                  backgroundColor: _statusColor(order.status),
+                                  label: Text(order.status),
+                                  backgroundColor:
+                                      _statusColor(order.status),
                                 ),
                               ],
                             ),
 
                             const SizedBox(height: 6),
 
-                            // 💰 PRICE + PAYMENT
+                            /// PRICE + PAYMENT
                             Text(
                               'Total: ₹${order.totalPrice.toStringAsFixed(2)}',
-                              style: const TextStyle(fontSize: 14),
                             ),
                             Text(
                               'Payment: ${order.paymentStatus}',
                               style: TextStyle(
-                                fontSize: 13,
                                 color: order.paymentStatus == 'paid'
                                     ? Colors.green
                                     : Colors.orange,
@@ -88,55 +86,43 @@ class OrdersScreen extends StatelessWidget {
 
                             const Divider(height: 20),
 
-                            // 📦 ITEMS
+                            /// ITEMS
                             const Text(
                               'Items:',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
+                              style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 4),
-
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: order.items.map((item) {
-                                return Text(
-                                  '• ${item.name} × ${item.quantity}',
-                                  style: const TextStyle(fontSize: 13),
-                                );
-                              }).toList(),
+                            ...order.items.map(
+                              (i) => Text('• ${i.name} × ${i.quantity}'),
                             ),
 
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 10),
 
-                            // 🚚 DELIVERY BOY
+                            /// DELIVERY BOY
                             Text(
-                              'Delivery Boy: ${order.deliveryBoyName ?? "Not assigned"}',
-                              style: const TextStyle(fontSize: 12),
+                              order.deliveryBoyName != null
+                                  ? 'Assigned to: ${order.deliveryBoyName}'
+                                  : 'Delivery Boy: Not assigned',
+                              style: TextStyle(
+                                color: order.deliveryBoyName != null
+                                    ? Colors.green
+                                    : Colors.red,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
 
-                            // ✅ ACCEPT BUTTON (ONLY IF PLACED)
-                            if (order.status == 'placed') ...[
+                            /// ACTIONS
+                            if (order.deliveryBoyName == null &&
+                                (order.status == 'placed' ||
+                                    order.status == 'accepted')) ...[
                               const SizedBox(height: 12),
                               SizedBox(
                                 width: double.infinity,
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                  ),
-                                  onPressed: () async {
-                                    await orderProvider.acceptOrder(order.id);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Order accepted'),
-                                      ),
-                                    );
-                                  },
-                                  child: const Text('Accept Order'),
+                                child: OutlinedButton(
+                                  onPressed: () =>
+                                      _showAssignDialog(context, order.id),
+                                  child:
+                                      const Text('Assign Delivery Boy'),
                                 ),
                               ),
                             ],
@@ -149,7 +135,77 @@ class OrdersScreen extends StatelessWidget {
     );
   }
 
-  // 🎨 STATUS COLOR
+  /// ASSIGN DIALOG
+  Future<void> _showAssignDialog(
+    BuildContext context,
+    String orderId,
+  ) async {
+    final provider = context.read<OrderProvider>();
+    final boys = await _fetchDeliveryBoys();
+    DeliveryBoy? selected;
+
+    if (!context.mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Assign Delivery Boy'),
+              content: DropdownButton<DeliveryBoy>(
+                isExpanded: true,
+                value: selected,
+                hint: const Text('Select delivery boy'),
+                items: boys.map((b) {
+                  return DropdownMenuItem(
+                    value: b,
+                    child: Text('${b.name} (${b.phone})'),
+                  );
+                }).toList(),
+                onChanged: (v) => setState(() => selected = v),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: selected == null
+                      ? null
+                      : () async {
+                          await provider.assignDeliveryBoy(
+                            orderId,
+                            selected!.id,
+                          );
+                          await provider.fetchOrders();
+                          if (context.mounted) Navigator.pop(context);
+                        },
+                  child: const Text('Assign'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// FETCH DELIVERY BOYS
+  Future<List<DeliveryBoy>> _fetchDeliveryBoys() async {
+    final res = await http.get(
+      Uri.parse(
+        'https://naturalfruitveg.com/api/delivery-boys?onlyAvailable=true',
+      ),
+    );
+
+    if (res.statusCode == 200) {
+      final List data = jsonDecode(res.body);
+      return data.map((e) => DeliveryBoy.fromJson(e)).toList();
+    }
+    return [];
+  }
+
   Color _statusColor(String status) {
     switch (status) {
       case 'placed':
