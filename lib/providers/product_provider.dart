@@ -53,7 +53,7 @@ class ProductProvider with ChangeNotifier {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'name': product.name,
-          'subtitle': product.subtitle, // ✅ NEW
+          'description': product.description, // ✅ NEW
           'price': product.price,
           'mrp': product.mrp,
           'discount': product.discount,
@@ -90,7 +90,7 @@ class ProductProvider with ChangeNotifier {
 
       final requestBody = {
         'name': product.name,
-        'subtitle': product.subtitle, // ✅ NEW
+        'description': product.description, // ✅ NEW
         'price': product.price,
         'mrp': product.mrp,
         'discount': product.discount,

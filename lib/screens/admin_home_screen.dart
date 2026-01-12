@@ -39,9 +39,17 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       body: _screens[_selectedIndex],
 
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed, // ✅ IMPORTANT
         currentIndex: _selectedIndex,
         selectedItemColor: Colors.green.shade700,
         unselectedItemColor: Colors.grey,
+        selectedLabelStyle: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontSize: 11,
+        ),
         onTap: (index) {
           setState(() => _selectedIndex = index);
         },

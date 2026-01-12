@@ -5,8 +5,8 @@ class Product {
   final String id;
   final String name;
 
-  // 🆕 Subtitle (varieties like Kashmir | Fuji | Shimla)
-  final String subtitle;
+  // ✅ Subtitle / Variety / Description
+  final String description;
 
   // 🔹 Pricing
   final double price;   // selling price
@@ -17,13 +17,13 @@ class Product {
   final String imagePath;
   final String category;
 
-  // ✅ ONLY stock (admin controls this)
+  // ✅ Stock controlled by admin
   final int stock;
 
   const Product({
     required this.id,
     required this.name,
-    this.subtitle = '', // ✅ NEW (optional, safe)
+    this.description = '', // ✅ SAFE DEFAULT
     required this.price,
     required this.mrp,
     required this.unit,
@@ -33,10 +33,11 @@ class Product {
     required this.stock,
   });
 
+  /// ✅ IMMUTABLE UPDATE
   Product copyWith({
     String? id,
     String? name,
-    String? subtitle,
+    String? description,
     double? price,
     double? mrp,
     int? discount,
@@ -48,7 +49,7 @@ class Product {
     return Product(
       id: id ?? this.id,
       name: name ?? this.name,
-      subtitle: subtitle ?? this.subtitle,
+      description: description ?? this.description, // ✅ FIXED
       price: price ?? this.price,
       mrp: mrp ?? this.mrp,
       discount: discount ?? this.discount,
@@ -59,6 +60,7 @@ class Product {
     );
   }
 
+  /// ✅ BACKEND → APP
   factory Product.fromJson(Map<String, dynamic> json) {
     final double parsedPrice =
         (json['price'] as num?)?.toDouble() ?? 0.0;
@@ -66,7 +68,7 @@ class Product {
     return Product(
       id: (json['_id'] ?? json['id'] ?? '').toString(),
       name: json['name'] ?? '',
-      subtitle: json['subtitle'] ?? '', // ✅ NEW
+      description: json['description'] ?? '', // ✅ ONLY THIS
       price: parsedPrice,
       mrp: (json['mrp'] as num?)?.toDouble() ?? parsedPrice,
       discount: json['discount'] ?? 0,
@@ -77,9 +79,10 @@ class Product {
     );
   }
 
+  /// ✅ APP → BACKEND
   Map<String, dynamic> toJson() => {
         'name': name,
-        'subtitle': subtitle, // ✅ NEW
+        'description': description, // ✅ ONLY THIS
         'price': price,
         'mrp': mrp,
         'discount': discount,

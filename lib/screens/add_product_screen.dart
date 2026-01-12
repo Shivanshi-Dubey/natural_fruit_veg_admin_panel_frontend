@@ -22,7 +22,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   // Fields
   String _name = '';
-  String _subtitle = '';
+  String _description = ''; // ✅ subtitle / variety
   String _unit = '1 pc';
   String _imagePath = '';
   String _category = '';
@@ -39,7 +39,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     if (widget.product != null) {
       final p = widget.product!;
       _name = p.name;
-      _subtitle = p.subtitle;
+      _description = p.description;
       _price = p.price;
       _mrp = p.mrp;
       _unit = p.unit;
@@ -48,8 +48,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
       _stock = p.stock;
     }
 
-    _priceCtrl = TextEditingController(
-        text: _price == 0 ? '' : _price.toStringAsFixed(0));
+    _priceCtrl =
+        TextEditingController(text: _price == 0 ? '' : _price.toStringAsFixed(0));
     _mrpCtrl =
         TextEditingController(text: _mrp == 0 ? '' : _mrp.toStringAsFixed(0));
     _stockCtrl = TextEditingController(text: _stock.toString());
@@ -78,7 +78,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     final product = Product(
       id: widget.product?.id ?? '',
       name: _name,
-      subtitle: _subtitle,
+      description: _description,
       price: _price,
       mrp: _mrp,
       unit: _unit,
@@ -136,9 +136,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   child: Column(
                     children: [
                       _textField("Product Name", _name, (v) => _name = v!),
-                      _textField("Subtitle / Variety", _subtitle,
-                          (v) => _subtitle = v!,
-                          required: false),
+
+                      _textField(
+                        "Subtitle / Variety",
+                        _description,
+                        (v) => _description = v!,
+                        required: false,
+                      ),
 
                       _numericField(
                         label: "Selling Price",
@@ -159,9 +163,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         },
                       ),
 
-                      _textField("Unit", _unit, (v) => _unit = v!),
+                      _textField("Unit (kg / pc / dozen)", _unit,
+                          (v) => _unit = v!),
+
                       _textField("Image URL", _imagePath,
                           (v) => _imagePath = v!),
+
                       _textField("Category", _category,
                           (v) => _category = v!),
 
@@ -183,11 +190,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
-                          child: Text(widget.product == null
-                              ? "Add Product"
-                              : "Update Product"),
+                          child: Text(
+                            widget.product == null
+                                ? "Add Product"
+                                : "Update Product",
+                          ),
                         ),
                       )
                     ],
@@ -214,9 +224,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: TextFormField(
         initialValue: value,
-        validator: required
-            ? (v) => v == null || v.isEmpty ? "Required" : null
-            : null,
+        validator:
+            required ? (v) => v == null || v.isEmpty ? "Required" : null : null,
         onSaved: onSave,
         decoration: InputDecoration(
           labelText: label,
