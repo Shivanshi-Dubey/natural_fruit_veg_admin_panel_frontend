@@ -118,6 +118,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
       appBar: AppBar(
         title: Text(widget.product == null ? 'Add Product' : 'Edit Product'),
         backgroundColor: Colors.green,
+        leading: Navigator.canPop(context)
+        ? IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.pop(context),
+          )
+        : null,
       ),
       body: Center(
         child: SingleChildScrollView(

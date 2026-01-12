@@ -31,6 +31,12 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
           appBar: AppBar(
             title: const Text('Manage Orders'),
             backgroundColor: Colors.green.shade700,
+            leading: Navigator.canPop(context)
+        ? IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.pop(context),
+          )
+        : null,
           ),
           body: provider.isLoading
               ? const Center(child: CircularProgressIndicator())

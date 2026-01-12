@@ -28,6 +28,12 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
       appBar: AppBar(
         title: const Text('Manage Products'),
         backgroundColor: Colors.green,
+        leading: Navigator.canPop(context)
+        ? IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.pop(context),
+          )
+        : null,
       ),
       body: provider.isLoading
           ? const Center(child: CircularProgressIndicator())

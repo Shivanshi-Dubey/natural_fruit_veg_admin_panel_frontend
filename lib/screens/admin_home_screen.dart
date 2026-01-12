@@ -31,11 +31,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_titles[_selectedIndex]),
-        backgroundColor: Colors.green.shade700,
-        elevation: 0,
-      ),
       body: _screens[_selectedIndex],
 
       bottomNavigationBar: BottomNavigationBar(
