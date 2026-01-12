@@ -26,15 +26,10 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Manage Products'),
-        backgroundColor: Colors.green,
-        leading: Navigator.canPop(context)
-        ? IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.pop(context),
-          )
-        : null,
-      ),
+  title: const Text('Manage Products'),
+  leading: const BackButton(), // ✅ FIX
+),
+
       body: provider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : provider.errorMessage != null

@@ -29,15 +29,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
       builder: (context, provider, _) {
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Manage Orders'),
-            backgroundColor: Colors.green.shade700,
-            leading: Navigator.canPop(context)
-        ? IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.pop(context),
-          )
-        : null,
-          ),
+  title: const Text('Manage Orders'),
+  leading: const BackButton(), // ✅ FIX
+),
+
           body: provider.isLoading
               ? const Center(child: CircularProgressIndicator())
               : provider.errorMessage != null
