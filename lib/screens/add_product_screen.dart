@@ -70,6 +70,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_priceError != null) return;
 
+    _formKey.currentState!.save();
+
     final discount =
         _mrp > _price ? (((_mrp - _price) / _mrp) * 100).round() : 0;
 
