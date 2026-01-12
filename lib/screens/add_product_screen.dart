@@ -115,12 +115,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-  title: Text(widget.product == null ? 'Add Product' : 'Edit Product'),
-  leading: const BackButton(), // ✅ FIX
-  backgroundColor: Colors.green,
-),
-
       body: Center(
         child: SingleChildScrollView(
           child: ConstrainedBox(

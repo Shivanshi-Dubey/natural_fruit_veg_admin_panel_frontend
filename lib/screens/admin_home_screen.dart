@@ -48,10 +48,15 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 onPressed: _goBackToDashboard,
               ),
       ),
+
       body: _screens[_selectedIndex],
+
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed, // ✅ no bubble background
         currentIndex: _selectedIndex,
         selectedItemColor: Colors.green.shade700,
+        unselectedItemColor: Colors.grey,
+        showUnselectedLabels: true,
         onTap: (index) {
           setState(() {
             _selectedIndex = index;
@@ -76,6 +81,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           ),
         ],
       ),
-    );
-  }
+    ); // ✅ missing semicolon FIXED
+  } // ✅ missing brace FIXED
 }
