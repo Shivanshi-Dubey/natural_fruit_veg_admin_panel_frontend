@@ -25,11 +25,6 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
     final provider = Provider.of<ProductProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(
-  title: const Text('Manage Products'),
-  leading: const BackButton(), // ✅ FIX
-),
-
       body: provider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : provider.errorMessage != null

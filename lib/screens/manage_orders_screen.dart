@@ -28,10 +28,6 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
     return Consumer<OrderProvider>(
       builder: (context, provider, _) {
         return Scaffold(
-          appBar: AppBar(
-  title: const Text('Manage Orders'),
-  leading: const BackButton(), // ✅ FIX
-),
 
           body: provider.isLoading
               ? const Center(child: CircularProgressIndicator())

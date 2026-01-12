@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'dashboard_screen.dart';
 import 'manage_products_screen.dart';
 import 'manage_orders_screen.dart';
@@ -28,25 +29,33 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     'Add Product',
   ];
 
+  void _goBackToDashboard() {
+    setState(() {
+      _selectedIndex = 0;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text(_titles[_selectedIndex]),
+        backgroundColor: Colors.green.shade700,
+        leading: _selectedIndex == 0
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: _goBackToDashboard,
+              ),
+      ),
       body: _screens[_selectedIndex],
-
       bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed, // ✅ IMPORTANT
         currentIndex: _selectedIndex,
         selectedItemColor: Colors.green.shade700,
-        unselectedItemColor: Colors.grey,
-        selectedLabelStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontSize: 11,
-        ),
         onTap: (index) {
-          setState(() => _selectedIndex = index);
+          setState(() {
+            _selectedIndex = index;
+          });
         },
         items: const [
           BottomNavigationBarItem(
@@ -54,7 +63,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             label: 'Dashboard',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.inventory_2),
+            icon: Icon(Icons.inventory),
             label: 'Products',
           ),
           BottomNavigationBarItem(
