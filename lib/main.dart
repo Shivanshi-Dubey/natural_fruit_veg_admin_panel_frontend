@@ -7,7 +7,6 @@ import 'providers/order_provider.dart';
 import 'providers/theme_provider.dart';
 
 // Screens
-import 'screens/admin_home_screen.dart';
 import 'screens/manage_products_screen.dart';
 import 'screens/manage_orders_screen.dart';
 import 'screens/add_product_screen.dart';
@@ -43,7 +42,7 @@ class AdminApp extends StatelessWidget {
             darkTheme: ThemeData.dark(),
 
             // 👇 ENTRY POINT
-            home: const AdminHomeScreen(),
+            home: const DashboardScreen(),
 
             routes: {
               '/dashboard': (context) => const DashboardScreen(),
