@@ -8,13 +8,9 @@ import '../models/order_model.dart';
 import '../providers/product_provider.dart';
 import '../providers/order_provider.dart';
 
-import 'products_screen.dart';
-import 'orders_screen.dart';
-import 'customers_screen.dart';
-import 'reports_screen.dart';
-import 'settings_screen.dart';
-import 'dead_products_screen.dart';
-import 'low_stock_products_screen.dart';
+/// =======================================================
+/// ERP-STYLE DASHBOARD (RUJUL GRADE)
+/// =======================================================
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -26,15 +22,15 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   Timer? _autoRefreshTimer;
 
+  /// ================= INIT =================
   @override
   void initState() {
     super.initState();
     _loadData();
 
-    /// 🔄 AUTO REFRESH EVERY 30 SECONDS
-    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      _loadData();
-    });
+    // Auto refresh every 30 sec (ERP behavior)
+    _autoRefreshTimer =
+        Timer.periodic(const Duration(seconds: 30), (_) => _loadData());
   }
 
   void _loadData() {
@@ -48,9 +44,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.dispose();
   }
 
-  /// ================== HELPERS ==================
+  /// ================= BUSINESS METRICS =================
   int totalProducts(List<Product> p) => p.length;
-  int totalOrders(List<Order> o) => o.length;
 
   int pendingOrders(List<Order> orders) =>
       orders.where((o) => o.status == 'placed').length;
@@ -71,7 +66,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int lowStockCount(List<Product> products) =>
       products.where((p) => p.stock <= 5).length;
 
-  /// 📈 SALES GRAPH (LAST 6 ORDERS)
   List<FlSpot> salesSpots(List<Order> orders) {
     final recent = orders.reversed.take(6).toList();
     return List.generate(
@@ -80,6 +74,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  /// ================= BUILD =================
   @override
   Widget build(BuildContext context) {
     final productProvider = context.watch<ProductProvider>();
@@ -91,73 +86,59 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final loading = productProvider.isLoading || orderProvider.isLoading;
 
     return Scaffold(
-      drawer: const AdminDrawer(),
-      appBar: AppBar(
-        title: const Text('Admin Dashboard'),
-        backgroundColor: Colors.green.shade700,
-      ),
+      backgroundColor: AdminColors.bg,
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : Padding(
-              padding: const EdgeInsets.all(16),
-              child: ListView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  /// ================= SUMMARY CARDS =================
-                  GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount:
-                        MediaQuery.of(context).size.width > 900 ? 4 : 2,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 3,
+                  /// ================= PAGE HEADER =================
+                  const Text(
+                    'Dashboard',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  /// ================= KPI ROW =================
+                  Row(
                     children: [
-                      _navCard(
-                        context,
-                        title: 'Products',
+                      _KpiCard(
+                        label: 'Total Products',
                         value: totalProducts(products).toString(),
-                        icon: Icons.inventory_2,
-                        color: Colors.orange.shade100,
-                        screen: const ProductsScreen(),
                       ),
-
-                      /// 🔴 NEW ORDERS
-                      _badgeCard(
-                        context,
-                        title: 'New Orders',
+                      _KpiCard(
+                        label: 'New Orders',
                         value: pendingOrders(orders).toString(),
-                        badge: pendingOrders(orders),
-                        icon: Icons.notifications_active,
-                        color: Colors.red.shade100,
-                        screen: const OrdersScreen(),
+                        highlight: AdminColors.warning,
                       ),
-
-                      _navCard(
-                        context,
-                        title: 'Revenue',
-                        value: '₹${totalRevenue(orders).toStringAsFixed(0)}',
-                        icon: Icons.currency_rupee,
-                        color: Colors.green.shade100,
-                        screen: const OrdersScreen(showOnlyPaid: true),
+                      _KpiCard(
+                        label: 'Revenue',
+                        value:
+                            '₹${totalRevenue(orders).toStringAsFixed(0)}',
                       ),
-
-                      _navCard(
-                        context,
-                        title: 'Items Sold',
+                      _KpiCard(
+                        label: 'Items Sold',
                         value: totalItemsSold(orders).toString(),
-                        icon: Icons.shopping_bag,
-                        color: Colors.purple.shade100,
-                        screen: const OrdersScreen(),
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 32),
 
-                  /// ================= SALES GRAPH =================
-                  _sectionTitle('Sales Overview'),
-                  SizedBox(
-                    height: 220,
+                  /// ================= SALES OVERVIEW =================
+                  const _SectionTitle('Sales Overview'),
+                  const SizedBox(height: 12),
+
+                  Container(
+                    height: 260,
+                    padding: const EdgeInsets.all(16),
+                    decoration: _box(),
                     child: LineChart(
                       LineChartData(
                         borderData: FlBorderData(show: false),
@@ -168,11 +149,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           LineChartBarData(
                             spots: salesSpots(orders),
                             isCurved: true,
-                            color: Colors.green.shade700,
+                            color: AdminColors.primary,
                             barWidth: 3,
                             belowBarData: BarAreaData(
                               show: true,
-                              color: Colors.green.withOpacity(0.15),
+                              color:
+                                  AdminColors.primary.withOpacity(0.08),
                             ),
                           ),
                         ],
@@ -180,28 +162,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 32),
 
                   /// ================= ADMIN ANALYTICS =================
-                  _sectionTitle('Admin Analytics'),
+                  const _SectionTitle('Admin Analytics'),
+                  const SizedBox(height: 12),
 
-                  _analyticsTile(
-                    context,
-                    icon: Icons.warning,
-                    color: Colors.red,
-                    title: 'Dead Products',
-                    subtitle: 'Stock but never sold',
-                    screen: const DeadProductsScreen(),
-                  ),
-
-                  _analyticsTile(
-                    context,
-                    icon: Icons.inventory,
-                    color: Colors.orange,
-                    title: 'Low Stock Products',
-                    subtitle:
-                        'Items ≤ 5 (${lowStockCount(products)})',
-                    screen: const LowStockProductsScreen(),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: _box(),
+                    child: Column(
+                      children: [
+                        _AnalyticsRow(
+                          title: 'Dead Products',
+                          subtitle: 'Stock available but never sold',
+                          color: AdminColors.danger,
+                        ),
+                        const Divider(),
+                        _AnalyticsRow(
+                          title: 'Low Stock Products',
+                          subtitle:
+                              'Items ≤ 5 (${lowStockCount(products)})',
+                          color: AdminColors.warning,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -209,123 +194,64 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  /// ================= UI HELPERS =================
-  Widget _sectionTitle(String title) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Text(title,
-            style: const TextStyle(
-                fontSize: 18, fontWeight: FontWeight.bold)),
+  /// ================= COMMON BOX =================
+  static BoxDecoration _box() => BoxDecoration(
+        color: AdminColors.card,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: AdminColors.border),
       );
+}
 
-  Widget _navCard(BuildContext context,
-      {required String title,
-      required String value,
-      required IconData icon,
-      required Color color,
-      required Widget screen}) {
-    return InkWell(
-      onTap: () =>
-          Navigator.push(context, MaterialPageRoute(builder: (_) => screen)),
-      child: DashboardCard(
-        title: title,
-        value: value,
-        icon: icon,
-        color: color,
-      ),
-    );
-  }
+/// =======================================================
+/// COMPONENTS (REUSABLE ACROSS ERP)
+/// =======================================================
 
-  Widget _badgeCard(BuildContext context,
-      {required String title,
-      required String value,
-      required int badge,
-      required IconData icon,
-      required Color color,
-      required Widget screen}) {
-    return Stack(
-      children: [
-        _navCard(context,
-            title: title,
-            value: value,
-            icon: icon,
-            color: color,
-            screen: screen),
-        if (badge > 0)
-          Positioned(
-            right: 12,
-            top: 12,
-            child: CircleAvatar(
-              radius: 10,
-              backgroundColor: Colors.red,
-              child: Text(
-                badge.toString(),
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold),
-              ),
-            ),
-          )
-      ],
-    );
-  }
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  const _SectionTitle(this.title);
 
-  Widget _analyticsTile(BuildContext context,
-      {required IconData icon,
-      required Color color,
-      required String title,
-      required String subtitle,
-      required Widget screen}) {
-    return Card(
-      child: ListTile(
-        leading: Icon(icon, color: color),
-        title: Text(title),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: () =>
-            Navigator.push(context, MaterialPageRoute(builder: (_) => screen)),
-      ),
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style:
+          const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
     );
   }
 }
 
-/// ================= CARD =================
-class DashboardCard extends StatelessWidget {
-  final String title;
+class _KpiCard extends StatelessWidget {
+  final String label;
   final String value;
-  final IconData icon;
-  final Color color;
+  final Color? highlight;
 
-  const DashboardCard(
-      {super.key,
-      required this.title,
-      required this.value,
-      required this.icon,
-      required this.color});
+  const _KpiCard({
+    required this.label,
+    required this.value,
+    this.highlight,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: color,
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.only(right: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: _DashboardScreenState._box(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 40),
-            const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w500)),
-                const SizedBox(height: 4),
-                Text(value,
-                    style: const TextStyle(
-                        fontSize: 22, fontWeight: FontWeight.bold)),
-              ],
+            Text(label,
+                style: const TextStyle(
+                    fontSize: 13, color: Colors.grey)),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: highlight,
+              ),
             ),
           ],
         ),
@@ -334,88 +260,49 @@ class DashboardCard extends StatelessWidget {
   }
 }
 
-class AdminDrawer extends StatelessWidget {
-  const AdminDrawer({super.key});
+class _AnalyticsRow extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final Color color;
+
+  const _AnalyticsRow({
+    required this.title,
+    required this.subtitle,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          DrawerHeader(
-            decoration: BoxDecoration(color: Colors.green.shade700),
-            child: const Text(
-              'Admin Panel',
-              style: TextStyle(color: Colors.white, fontSize: 20),
-            ),
-          ),
-          _drawerItem(
-            context,
-            Icons.inventory_2,
-            'Products',
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProductsScreen()),
-              );
-            },
-          ),
-          _drawerItem(
-            context,
-            Icons.shopping_cart,
-            'Orders',
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const OrdersScreen()),
-              );
-            },
-          ),
-          _drawerItem(
-            context,
-            Icons.people,
-            'Customers',
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CustomersScreen()),
-              );
-            },
-          ),
-          _drawerItem(
-            context,
-            Icons.bar_chart,
-            'Reports',
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ReportsScreen()),
-              );
-            },
-          ),
-          _drawerItem(
-            context,
-            Icons.settings,
-            'Settings',
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              );
-            },
-          ),
-        ],
-      ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title,
+                style:
+                    const TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            Text(subtitle,
+                style:
+                    const TextStyle(color: Colors.grey, fontSize: 13)),
+          ],
+        ),
+        Icon(Icons.arrow_forward_ios, size: 16, color: color),
+      ],
     );
   }
+}
 
-  Widget _drawerItem(
-      BuildContext context, IconData icon, String title, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.green.shade700),
-      title: Text(title),
-      onTap: onTap,
-    );
-  }
+/// =======================================================
+/// COLORS
+/// =======================================================
+class AdminColors {
+  static const bg = Color(0xFFF8FAFC);
+  static const card = Colors.white;
+  static const border = Color(0xFFE5E7EB);
+  static const primary = Color(0xFF1E293B);
+  static const success = Color(0xFF16A34A);
+  static const warning = Color(0xFFF59E0B);
+  static const danger = Color(0xFFDC2626);
 }

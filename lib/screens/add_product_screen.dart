@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+
 import '../models/product_model.dart';
 import '../providers/product_provider.dart';
 
@@ -22,10 +23,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   // Fields
   String _name = '';
-  String _description = ''; // ✅ subtitle / variety
-  String _unit = '1 pc';
+  String _description = '';
+  String _unit = '1 kg';
   String _imagePath = '';
   String _category = '';
+
   double _price = 0;
   double _mrp = 0;
   int _stock = 10;
@@ -64,7 +66,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   }
 
   /* =========================
-     💾 SAVE
+     SAVE PRODUCT
   ========================= */
   Future<void> _saveForm() async {
     if (!_formKey.currentState!.validate()) return;
@@ -97,9 +99,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
     if (mounted) Navigator.pop(context);
   }
 
-  /* =========================
-     🔍 PRICE VALIDATION
-  ========================= */
   void _validatePrices() {
     if (_mrp > 0 && _price > _mrp) {
       _priceError = "Selling price cannot be greater than MRP";
@@ -115,16 +114,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.product == null ? "Add Product" : "Edit Product"),
+      ),
       body: Center(
         child: SingleChildScrollView(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 720),
             child: Card(
               margin: const EdgeInsets.all(24),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              elevation: 6,
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Form(
@@ -141,7 +139,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       ),
 
                       _numericField(
-                        label: "Selling Price",
+                        label: "Selling Price (₹)",
                         controller: _priceCtrl,
                         errorText: _priceError,
                         onChanged: (v) {
@@ -151,7 +149,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       ),
 
                       _numericField(
-                        label: "MRP",
+                        label: "MRP (₹)",
                         controller: _mrpCtrl,
                         onChanged: (v) {
                           _mrp = double.tryParse(v) ?? 0;
@@ -159,14 +157,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         },
                       ),
 
-                      _textField("Unit (kg / pc / dozen)", _unit,
-                          (v) => _unit = v!),
+                      _dropdownUnit(),
 
-                      _textField("Image URL", _imagePath,
-                          (v) => _imagePath = v!),
+                      _textField("Image URL", _imagePath, (v) => _imagePath = v!),
 
-                      _textField("Category", _category,
-                          (v) => _category = v!),
+                      _textField("Category", _category, (v) => _category = v!),
 
                       _numericField(
                         label: "Stock",
@@ -183,12 +178,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         height: 48,
                         child: ElevatedButton(
                           onPressed: _saveForm,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
                           child: Text(
                             widget.product == null
                                 ? "Add Product"
@@ -208,8 +197,27 @@ class _AddProductScreenState extends State<AddProductScreen> {
   }
 
   /* =========================
-     FIELD HELPERS
+     HELPERS
   ========================= */
+  Widget _dropdownUnit() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: DropdownButtonFormField<String>(
+        value: _unit,
+        items: const [
+          DropdownMenuItem(value: '1 kg', child: Text('1 kg')),
+          DropdownMenuItem(value: '500 g', child: Text('500 g')),
+          DropdownMenuItem(value: '250 g', child: Text('250 g')),
+          DropdownMenuItem(value: '100 g', child: Text('100 g')),
+          DropdownMenuItem(value: '1 pc', child: Text('1 pc')),
+          DropdownMenuItem(value: '6 pcs', child: Text('6 pcs')),
+        ],
+        onChanged: (v) => setState(() => _unit = v!),
+        decoration: const InputDecoration(labelText: "Unit"),
+      ),
+    );
+  }
+
   Widget _textField(
     String label,
     String value,
@@ -223,10 +231,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
         validator:
             required ? (v) => v == null || v.isEmpty ? "Required" : null : null,
         onSaved: onSave,
-        decoration: InputDecoration(
-          labelText: label,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-        ),
+        decoration: InputDecoration(labelText: label),
       ),
     );
   }
@@ -250,7 +255,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
         decoration: InputDecoration(
           labelText: label,
           errorText: errorText,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         ),
       ),
     );
