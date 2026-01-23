@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
+import '../layouts/admin_layout.dart';
 import '../models/delivery_boy.dart';
 import '../models/order_model.dart';
 import '../providers/order_provider.dart';
@@ -15,6 +16,8 @@ class ManageOrdersScreen extends StatefulWidget {
 }
 
 class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
+  String _statusFilter = 'all';
+
   @override
   void initState() {
     super.initState();
@@ -25,180 +28,157 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<OrderProvider>(
-      builder: (context, provider, _) {
-        return Scaffold(
+    final provider = context.watch<OrderProvider>();
 
-          body: provider.isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : provider.errorMessage != null
-                  ? _errorView(provider.errorMessage!)
-                  : RefreshIndicator(
-                      onRefresh: provider.fetchOrders,
-                      child: provider.orders.isEmpty
-                          ? const Center(child: Text('No orders found'))
-                          : ListView.builder(
-                              padding: const EdgeInsets.all(12),
-                              itemCount: provider.orders.length,
-                              itemBuilder: (_, i) =>
-                                  _OrderCard(order: provider.orders[i]),
+    final orders = _statusFilter == 'all'
+        ? provider.orders
+        : provider.orders
+            .where((o) => o.status == _statusFilter)
+            .toList();
+
+    return AdminLayout(
+      title: 'Orders',
+      child: provider.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : provider.errorMessage != null
+              ? Center(
+                  child: Text(
+                    provider.errorMessage!,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                )
+              : Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      /// ================= HEADER =================
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Orders Management',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
                             ),
-                    ),
-        );
-      },
-    );
-  }
+                          ),
+                          DropdownButton<String>(
+                            value: _statusFilter,
+                            items: const [
+                              DropdownMenuItem(
+                                  value: 'all', child: Text('All')),
+                              DropdownMenuItem(
+                                  value: 'placed', child: Text('Placed')),
+                              DropdownMenuItem(
+                                  value: 'accepted', child: Text('Accepted')),
+                              DropdownMenuItem(
+                                  value: 'assigned', child: Text('Assigned')),
+                              DropdownMenuItem(
+                                  value: 'out_for_delivery',
+                                  child: Text('Out for delivery')),
+                              DropdownMenuItem(
+                                  value: 'delivered',
+                                  child: Text('Delivered')),
+                              DropdownMenuItem(
+                                  value: 'cancelled',
+                                  child: Text('Cancelled')),
+                            ],
+                            onChanged: (v) =>
+                                setState(() => _statusFilter = v!),
+                          ),
+                        ],
+                      ),
 
-  Widget _errorView(String message) {
-    return Center(
-      child: Text(
-        message,
-        style: const TextStyle(color: Colors.red),
-        textAlign: TextAlign.center,
-      ),
-    );
-  }
-}
+                      const SizedBox(height: 16),
 
-/* ============================================================
-   🧾 ORDER CARD
-============================================================ */
-class _OrderCard extends StatelessWidget {
-  final Order order;
-  const _OrderCard({required this.order});
-
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'placed':
-        return Colors.grey;
-      case 'accepted':
-        return Colors.blue;
-      case 'assigned':
-      case 'out_for_delivery':
-        return Colors.orange;
-      case 'delivered':
-        return Colors.green;
-      case 'cancelled':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final provider = context.read<OrderProvider>();
-
-    return Card(
-      elevation: 4,
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            /// HEADER
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Order #${order.id.substring(order.id.length - 6)}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                      /// ================= TABLE =================
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(
+                                color: const Color(0xFFE5E7EB)),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: SingleChildScrollView(
+                            child: DataTable(
+                              columnSpacing: 24,
+                              headingRowColor:
+                                  MaterialStateProperty.all(
+                                      const Color(0xFFF9FAFB)),
+                              columns: const [
+                                DataColumn(label: Text('Order ID')),
+                                DataColumn(label: Text('Customer')),
+                                DataColumn(label: Text('Amount')),
+                                DataColumn(label: Text('Payment')),
+                                DataColumn(label: Text('Status')),
+                                DataColumn(label: Text('Delivery')),
+                                DataColumn(label: Text('Actions')),
+                              ],
+                              rows: orders.map((order) {
+                                return DataRow(
+                                  cells: [
+                                    DataCell(Text(
+                                        order.id.substring(order.id.length - 6))),
+                                    DataCell(Text(order.customerName)),
+                                    DataCell(Text(
+                                        '₹${order.totalPrice.toStringAsFixed(0)}')),
+                                    DataCell(
+                                      Text(
+                                        order.paymentStatus.toUpperCase(),
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: order.paymentStatus == 'paid'
+                                              ? Colors.green
+                                              : Colors.orange,
+                                        ),
+                                      ),
+                                    ),
+                                    DataCell(_StatusChip(order.status)),
+                                    DataCell(Text(order.deliveryBoyName ??
+                                        'Not assigned')),
+                                    DataCell(
+                                      Row(
+                                        children: [
+                                          if (order.status == 'placed')
+                                            TextButton(
+                                              onPressed: () async {
+                                                await provider.acceptOrder(
+                                                    order.id);
+                                                await provider.fetchOrders();
+                                              },
+                                              child:
+                                                  const Text('Accept'),
+                                            ),
+                                          if (order.status == 'accepted')
+                                            TextButton(
+                                              onPressed: () =>
+                                                  _showAssignDialog(
+                                                context,
+                                                provider,
+                                                order.id,
+                                              ),
+                                              child:
+                                                  const Text('Assign'),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                Chip(
-                  label: Text(order.status),
-                  backgroundColor:
-                      _statusColor(order.status).withOpacity(0.15),
-                  labelStyle: TextStyle(
-                    color: _statusColor(order.status),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 8),
-            Text('Customer: ${order.customerName}'),
-
-            const SizedBox(height: 6),
-            Text(
-              'Total: ₹${order.totalPrice.toStringAsFixed(0)} '
-              '(Items ₹${order.itemsTotal.toStringAsFixed(0)} + '
-              'Delivery ₹${order.deliveryCharge.toStringAsFixed(0)})',
-            ),
-
-            const SizedBox(height: 6),
-            Text(
-              'Payment: ${order.paymentStatus}',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: order.paymentStatus == 'paid'
-                    ? Colors.green
-                    : Colors.orange,
-              ),
-            ),
-
-            const SizedBox(height: 6),
-            Text(
-              'Delivery Boy: ${order.deliveryBoyName ?? 'Not assigned'}',
-            ),
-
-            const Divider(height: 24),
-
-            /// 📦 ITEMS
-            const Text(
-              'Ordered Items',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            ...order.items.map(
-              (i) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text('• ${i.name} × ${i.quantity}'),
-              ),
-            ),
-
-            const Divider(height: 24),
-
-            /// ACTIONS
-            Wrap(
-              spacing: 12,
-              children: [
-                if (order.status == 'placed')
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.check),
-                    label: const Text('Accept Order'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade700,
-                    ),
-                    onPressed: () async {
-                      await provider.acceptOrder(order.id);
-                      await provider.fetchOrders();
-                    },
-                  ),
-
-                if (order.status == 'accepted')
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.delivery_dining),
-                    label: const Text('Assign Delivery Boy'),
-                    onPressed: () =>
-                        _showAssignDialog(context, provider, order.id),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 
-  /* ============================================================
-     👤 ASSIGN DELIVERY BOY
-  ============================================================ */
+  /// ================= ASSIGN DELIVERY =================
   Future<void> _showAssignDialog(
     BuildContext context,
     OrderProvider provider,
@@ -234,17 +214,14 @@ class _OrderCard extends StatelessWidget {
                     ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel')),
                 ElevatedButton(
                   onPressed: selected == null
                       ? null
                       : () async {
                           await provider.assignDeliveryBoy(
-                            orderId,
-                            selected!.id,
-                          );
+                              orderId, selected!.id);
                           await provider.fetchOrders();
                           if (context.mounted) Navigator.pop(context);
                         },
@@ -258,14 +235,10 @@ class _OrderCard extends StatelessWidget {
     );
   }
 
-  /* ============================================================
-     🌐 FETCH DELIVERY BOYS
-  ============================================================ */
   Future<List<DeliveryBoy>> _fetchDeliveryBoys() async {
     final res = await http.get(
       Uri.parse(
-        'https://naturalfruitveg.com/api/delivery-boys?onlyAvailable=true',
-      ),
+          'https://naturalfruitveg.com/api/delivery-boys?onlyAvailable=true'),
     );
 
     if (res.statusCode == 200) {
@@ -276,3 +249,49 @@ class _OrderCard extends StatelessWidget {
   }
 }
 
+/// ================= STATUS CHIP =================
+class _StatusChip extends StatelessWidget {
+  final String status;
+  const _StatusChip(this.status);
+
+  @override
+  Widget build(BuildContext context) {
+    Color color;
+    switch (status) {
+      case 'placed':
+        color = Colors.grey;
+        break;
+      case 'accepted':
+        color = Colors.blue;
+        break;
+      case 'assigned':
+      case 'out_for_delivery':
+        color = Colors.orange;
+        break;
+      case 'delivered':
+        color = Colors.green;
+        break;
+      case 'cancelled':
+        color = Colors.red;
+        break;
+      default:
+        color = Colors.grey;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+}

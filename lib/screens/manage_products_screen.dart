@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../layouts/admin_layout.dart';
 import '../models/product_model.dart';
 import '../providers/product_provider.dart';
 import 'add_product_screen.dart';
@@ -15,145 +17,187 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch products when screen loads
     Future.microtask(() =>
-        Provider.of<ProductProvider>(context, listen: false).fetchProducts());
+        context.read<ProductProvider>().fetchProducts());
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<ProductProvider>(context);
+    final provider = context.watch<ProductProvider>();
 
-    return Scaffold(
-      body: provider.isLoading
+    return AdminLayout(
+      title: 'Products',
+      child: provider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : provider.errorMessage != null
               ? Center(child: Text(provider.errorMessage!))
-              : RefreshIndicator(
-                  onRefresh: () => provider.fetchProducts(),
-                  child: ListView.builder(
-                    itemCount: provider.products.length,
-                    itemBuilder: (context, index) {
-                      final Product product = provider.products[index];
-
-                      // ✅ STOCK is the source of truth
-                      final bool isOutOfStock = product.stock <= 0;
-
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        elevation: 2,
-                        child: ListTile(
-                          leading: Image.network(
-                            product.imagePath.isNotEmpty
-                                ? product.imagePath
-                                : 'https://via.placeholder.com/80',
-                            width: 60,
-                            height: 60,
-                            fit: BoxFit.cover,
-                          ),
-                          title: Text(
-                            product.name,
-                            style: const TextStyle(
+              : Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ================= HEADER =================
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Product Inventory',
+                            style: TextStyle(
+                              fontSize: 18,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          subtitle: Text(
-                            '₹${product.price.toStringAsFixed(2)} • ${product.category}\n'
-                            'Stock: ${product.stock}',
-                            style: const TextStyle(fontSize: 13),
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.add),
+                            label: const Text('Add Product'),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => AdminLayout(
+                                    title: 'Add Product',
+                                    showBack: true,
+                                    child: const AddProductScreen(),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // ✅ OUT OF STOCK TOGGLE (STOCK BASED)
-                              Switch(
-                                value: !isOutOfStock,
-                                activeColor: Colors.green,
-                                onChanged: (value) async {
-                                  if (product.id.isEmpty) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('❌ Product ID is missing'),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                    }
-                                    return;
-                                  }
+                        ],
+                      ),
 
-                                  final updatedProduct = product.copyWith(
-                                    stock: value ? 10 : 0, // ✅ change stock
-                                  );
+                      const SizedBox(height: 16),
 
-                                  await provider.updateProduct(
-                                    updatedProduct,
-                                    context,
-                                  );
-                                },
-                              ),
+                      // ================= TABLE =================
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(
+                                color: const Color(0xFFE5E7EB)),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.vertical,
+                            child: DataTable(
+                              columnSpacing: 24,
+                              headingRowColor:
+                                  MaterialStateProperty.all(
+                                      const Color(0xFFF9FAFB)),
+                              columns: const [
+                                DataColumn(label: Text('Product')),
+                                DataColumn(label: Text('Price')),
+                                DataColumn(label: Text('Stock')),
+                                DataColumn(label: Text('Status')),
+                                DataColumn(label: Text('Actions')),
+                              ],
+                              rows: provider.products.map((product) {
+                                final bool inStock = product.stock > 0;
 
-                              // ✏️ EDIT
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.edit,
-                                  color: Colors.blue,
-                                ),
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          AddProductScreen(product: product),
+                                return DataRow(
+                                  cells: [
+                                    DataCell(
+                                      Row(
+                                        children: [
+                                          Image.network(
+                                            product.imagePath.isNotEmpty
+                                                ? product.imagePath
+                                                : 'https://via.placeholder.com/40',
+                                            width: 40,
+                                            height: 40,
+                                            fit: BoxFit.cover,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Text(product.name,
+                                                  style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w600)),
+                                              Text(product.category,
+                                                  style: const TextStyle(
+                                                      fontSize: 12,
+                                                      color: Colors.grey)),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  );
-                                },
-                              ),
-
-                              // ❌ DELETE
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete,
-                                  color: Colors.red,
-                                ),
-                                onPressed: () async {
-                                  if (product.id.isEmpty) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('❌ Product ID is missing'),
-                                          backgroundColor: Colors.red,
+                                    DataCell(
+                                      Text('₹${product.price.toStringAsFixed(0)}'),
+                                    ),
+                                    DataCell(
+                                      Text(product.stock.toString()),
+                                    ),
+                                    DataCell(
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: inStock
+                                              ? Colors.green.withOpacity(0.1)
+                                              : Colors.red.withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(4),
                                         ),
-                                      );
-                                    }
-                                    return;
-                                  }
-                                  await provider.deleteProduct(
-                                    product.id,
-                                    context,
-                                  );
-                                },
-                              ),
-                            ],
+                                        child: Text(
+                                          inStock ? 'Active' : 'Out of stock',
+                                          style: TextStyle(
+                                            color: inStock
+                                                ? Colors.green
+                                                : Colors.red,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    DataCell(
+                                      Row(
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(Icons.edit,
+                                                size: 18),
+                                            onPressed: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) => AdminLayout(
+                                                    title: 'Edit Product',
+                                                    showBack: true,
+                                                    child: AddProductScreen(
+                                                        product: product),
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.delete,
+                                                size: 18,
+                                                color: Colors.red),
+                                            onPressed: () async {
+                                              await provider.deleteProduct(
+                                                  product.id, context);
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }).toList(),
+                            ),
                           ),
                         ),
-                      );
-                    },
+                      ),
+                    ],
                   ),
                 ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.green,
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const AddProductScreen(),
-            ),
-          );
-        },
-        child: const Icon(Icons.add),
-      ),
     );
   }
 }

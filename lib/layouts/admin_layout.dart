@@ -10,11 +10,13 @@ import '../screens/settings_screen.dart';
 class AdminLayout extends StatelessWidget {
   final Widget child;
   final String title;
+  final bool showBack;
 
   const AdminLayout({
     super.key,
     required this.child,
     required this.title,
+    this.showBack = false,
   });
 
   @override
@@ -44,51 +46,23 @@ class AdminLayout extends StatelessWidget {
                 ),
                 const SizedBox(height: 32),
 
-                _menuItem(
-                  context,
-                  Icons.dashboard,
-                  'Dashboard',
-                  const DashboardScreen(),
-                ),
-                _menuItem(
-                  context,
-                  Icons.inventory_2,
-                  'Products',
-                  const ProductsScreen(),
-                ),
-                _menuItem(
-                  context,
-                  Icons.shopping_cart,
-                  'Orders',
-                  const OrdersScreen(),
-                ),
-                _menuItem(
-                  context,
-                  Icons.people,
-                  'Customers',
-                  const CustomersScreen(),
-                ),
-                _menuItem(
-                  context,
-                  Icons.bar_chart,
-                  'Reports',
-                  const ReportsScreen(),
-                ),
-                _menuItem(
-                  context,
-                  Icons.settings,
-                  'Settings',
-                  const SettingsScreen(),
-                ),
+                _menuItem(context, Icons.dashboard, 'Dashboard',
+                    const DashboardScreen()),
+                _menuItem(context, Icons.inventory_2, 'Products',
+                    const ProductsScreen()),
+                _menuItem(context, Icons.shopping_cart, 'Orders',
+                    const OrdersScreen()),
+                _menuItem(context, Icons.people, 'Customers',
+                    const CustomersScreen()),
+                _menuItem(context, Icons.bar_chart, 'Reports',
+                    const ReportsScreen()),
+                _menuItem(context, Icons.settings, 'Settings',
+                    const SettingsScreen()),
 
                 const Spacer(),
 
-                _menuItem(
-                  context,
-                  Icons.logout,
-                  'Logout',
-                  const DashboardScreen(), // change later if needed
-                ),
+                _menuItem(context, Icons.logout, 'Logout',
+                    const DashboardScreen()),
 
                 const SizedBox(height: 20),
               ],
@@ -112,14 +86,29 @@ class AdminLayout extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      // 🔹 LEFT: Back + Title
+                      Row(
+                        children: [
+                          if (showBack)
+                            IconButton(
+                              icon: const Icon(Icons.arrow_back),
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                            ),
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
+
+                      // 🔹 RIGHT: Profile
                       const CircleAvatar(
+                        radius: 18,
                         child: Icon(Icons.person),
                       ),
                     ],
