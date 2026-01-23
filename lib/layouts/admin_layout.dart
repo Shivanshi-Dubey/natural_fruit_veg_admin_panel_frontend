@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../screens/dashboard_screen.dart';
+import '../screens/products_screen.dart';
+import '../screens/orders_screen.dart';
+import '../screens/customers_screen.dart';
+import '../screens/reports_screen.dart';
+import '../screens/settings_screen.dart';
+
 class AdminLayout extends StatelessWidget {
   final Widget child;
   final String title;
@@ -37,15 +44,52 @@ class AdminLayout extends StatelessWidget {
                 ),
                 const SizedBox(height: 32),
 
-                _menuItem(Icons.dashboard, 'Dashboard', true),
-                _menuItem(Icons.inventory_2, 'Products', false),
-                _menuItem(Icons.shopping_cart, 'Orders', false),
-                _menuItem(Icons.people, 'Customers', false),
-                _menuItem(Icons.bar_chart, 'Reports', false),
-                _menuItem(Icons.settings, 'Settings', false),
+                _menuItem(
+                  context,
+                  Icons.dashboard,
+                  'Dashboard',
+                  const DashboardScreen(),
+                ),
+                _menuItem(
+                  context,
+                  Icons.inventory_2,
+                  'Products',
+                  const ProductsScreen(),
+                ),
+                _menuItem(
+                  context,
+                  Icons.shopping_cart,
+                  'Orders',
+                  const OrdersScreen(),
+                ),
+                _menuItem(
+                  context,
+                  Icons.people,
+                  'Customers',
+                  const CustomersScreen(),
+                ),
+                _menuItem(
+                  context,
+                  Icons.bar_chart,
+                  'Reports',
+                  const ReportsScreen(),
+                ),
+                _menuItem(
+                  context,
+                  Icons.settings,
+                  'Settings',
+                  const SettingsScreen(),
+                ),
 
                 const Spacer(),
-                _menuItem(Icons.logout, 'Logout', false),
+
+                _menuItem(
+                  context,
+                  Icons.logout,
+                  'Logout',
+                  const DashboardScreen(), // change later if needed
+                ),
+
                 const SizedBox(height: 20),
               ],
             ),
@@ -83,9 +127,7 @@ class AdminLayout extends StatelessWidget {
                 ),
 
                 // ---------- PAGE ----------
-                Expanded(
-                  child: child,
-                ),
+                Expanded(child: child),
               ],
             ),
           ),
@@ -94,8 +136,15 @@ class AdminLayout extends StatelessWidget {
     );
   }
 
-  static Widget _menuItem(
-      IconData icon, String label, bool active) {
+  // ================= MENU ITEM =================
+  Widget _menuItem(
+    BuildContext context,
+    IconData icon,
+    String label,
+    Widget screen,
+  ) {
+    final bool active = title == label;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -103,9 +152,16 @@ class AdminLayout extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: ListTile(
-        leading: Icon(icon, color: Colors.white),
+        leading: Icon(icon, color: Colors.white, size: 20),
         title: Text(label, style: const TextStyle(color: Colors.white)),
-        onTap: () {},
+        onTap: () {
+          if (!active) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => screen),
+            );
+          }
+        },
       ),
     );
   }
