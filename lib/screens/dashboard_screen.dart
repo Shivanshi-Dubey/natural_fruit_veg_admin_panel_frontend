@@ -7,9 +7,10 @@ import '../models/product_model.dart';
 import '../models/order_model.dart';
 import '../providers/product_provider.dart';
 import '../providers/order_provider.dart';
+import '../layouts/admin_layout.dart';
 
 /// =======================================================
-/// ERP-STYLE DASHBOARD (RUJUL GRADE)
+/// ERP-STYLE DASHBOARD (RUJUL DETAILED)
 /// =======================================================
 
 class DashboardScreen extends StatefulWidget {
@@ -21,14 +22,12 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   Timer? _autoRefreshTimer;
+  String _salesFilter = 'Last 7 Days';
 
-  /// ================= INIT =================
   @override
   void initState() {
     super.initState();
     _loadData();
-
-    // Auto refresh every 30 sec (ERP behavior)
     _autoRefreshTimer =
         Timer.periodic(const Duration(seconds: 30), (_) => _loadData());
   }
@@ -44,7 +43,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.dispose();
   }
 
-  /// ================= BUSINESS METRICS =================
+  /// ================= METRICS =================
   int totalProducts(List<Product> p) => p.length;
 
   int pendingOrders(List<Order> orders) =>
@@ -85,46 +84,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final loading = productProvider.isLoading || orderProvider.isLoading;
 
-    return Scaffold(
-      backgroundColor: AdminColors.bg,
-      body: loading
+    return AdminLayout(
+      title: 'Dashboard',
+      child: loading
           ? const Center(child: CircularProgressIndicator())
-          : Padding(
+          : SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  /// ================= PAGE HEADER =================
-                  const Text(
-                    'Dashboard',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  /// ================= KPI ROW =================
+                  /// ================= KPI =================
                   Row(
                     children: [
                       _KpiCard(
                         label: 'Total Products',
                         value: totalProducts(products).toString(),
+                        hint: 'Active inventory items',
                       ),
                       _KpiCard(
                         label: 'New Orders',
                         value: pendingOrders(orders).toString(),
+                        hint: 'Orders awaiting processing',
                         highlight: AdminColors.warning,
                       ),
                       _KpiCard(
                         label: 'Revenue',
                         value:
                             '₹${totalRevenue(orders).toStringAsFixed(0)}',
+                        hint: 'Total sales value',
                       ),
                       _KpiCard(
                         label: 'Items Sold',
                         value: totalItemsSold(orders).toString(),
+                        hint: 'Total quantity sold',
                       ),
                     ],
                   ),
@@ -132,7 +124,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(height: 32),
 
                   /// ================= SALES OVERVIEW =================
-                  const _SectionTitle('Sales Overview'),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const _SectionTitle('Sales Overview'),
+                      DropdownButton<String>(
+                        value: _salesFilter,
+                        items: const [
+                          DropdownMenuItem(
+                              value: 'Today', child: Text('Today')),
+                          DropdownMenuItem(
+                              value: 'Last 7 Days',
+                              child: Text('Last 7 Days')),
+                          DropdownMenuItem(
+                              value: 'Last 30 Days',
+                              child: Text('Last 30 Days')),
+                        ],
+                        onChanged: (v) {
+                          if (v != null) {
+                            setState(() => _salesFilter = v);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 12),
 
                   Container(
@@ -159,6 +174,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ],
                       ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  /// ================= RECENT ORDERS =================
+                  const _SectionTitle('Recent Orders'),
+                  const SizedBox(height: 12),
+
+                  Container(
+                    decoration: _box(),
+                    child: Column(
+                      children: orders.take(5).map((o) {
+                        return ListTile(
+                          title: Text('Order #${o.id}'),
+                          subtitle: Text(
+                              '₹${o.totalPrice.toStringAsFixed(0)}'),
+                          trailing: Text(
+                            o.status.toUpperCase(),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: o.status == 'placed'
+                                  ? AdminColors.warning
+                                  : AdminColors.success,
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
 
@@ -194,7 +237,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  /// ================= COMMON BOX =================
   static BoxDecoration _box() => BoxDecoration(
         color: AdminColors.card,
         borderRadius: BorderRadius.circular(6),
@@ -202,9 +244,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
 }
 
-/// =======================================================
-/// COMPONENTS (REUSABLE ACROSS ERP)
-/// =======================================================
+/// ================= COMPONENTS =================
 
 class _SectionTitle extends StatelessWidget {
   final String title;
@@ -223,11 +263,13 @@ class _SectionTitle extends StatelessWidget {
 class _KpiCard extends StatelessWidget {
   final String label;
   final String value;
+  final String hint;
   final Color? highlight;
 
   const _KpiCard({
     required this.label,
     required this.value,
+    required this.hint,
     this.highlight,
   });
 
@@ -244,7 +286,7 @@ class _KpiCard extends StatelessWidget {
             Text(label,
                 style: const TextStyle(
                     fontSize: 13, color: Colors.grey)),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               value,
               style: TextStyle(
@@ -252,6 +294,11 @@ class _KpiCard extends StatelessWidget {
                 fontWeight: FontWeight.bold,
                 color: highlight,
               ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              hint,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
         ),
@@ -288,15 +335,20 @@ class _AnalyticsRow extends StatelessWidget {
                     const TextStyle(color: Colors.grey, fontSize: 13)),
           ],
         ),
-        Icon(Icons.arrow_forward_ios, size: 16, color: color),
+        Text(
+          'View',
+          style: TextStyle(
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ],
     );
   }
 }
 
-/// =======================================================
-/// COLORS
-/// =======================================================
+/// ================= COLORS =================
+
 class AdminColors {
   static const bg = Color(0xFFF8FAFC);
   static const card = Colors.white;
