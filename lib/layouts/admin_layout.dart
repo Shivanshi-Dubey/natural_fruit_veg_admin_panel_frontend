@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../screens/dashboard_screen.dart';
-import '../screens/products_screen.dart';
-import '../screens/orders_screen.dart';
+import '../screens/manage_products_screen.dart';
+import '../screens/manage_orders_screen.dart';
 import '../screens/customers_screen.dart';
 import '../screens/reports_screen.dart';
 import '../screens/settings_screen.dart';
@@ -49,9 +49,9 @@ class AdminLayout extends StatelessWidget {
                 _menuItem(context, Icons.dashboard, 'Dashboard',
                     const DashboardScreen()),
                 _menuItem(context, Icons.inventory_2, 'Products',
-                    const ProductsScreen()),
+                    const ManageProductsScreen()),
                 _menuItem(context, Icons.shopping_cart, 'Orders',
-                    const OrdersScreen()),
+                    const ManageOrdersScreen()),
                 _menuItem(context, Icons.people, 'Customers',
                     const CustomersScreen()),
                 _menuItem(context, Icons.bar_chart, 'Reports',
