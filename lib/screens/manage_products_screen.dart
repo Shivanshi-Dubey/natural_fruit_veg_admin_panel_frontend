@@ -10,15 +10,43 @@ class ManageProductsScreen extends StatefulWidget {
   const ManageProductsScreen({super.key});
 
   @override
-  State<ManageProductsScreen> createState() => _ManageProductsScreenState();
+  State<ManageProductsScreen> createState() =>
+      _ManageProductsScreenState();
 }
 
 class _ManageProductsScreenState extends State<ManageProductsScreen> {
+  List<Product> _filteredProducts = [];
+
   @override
   void initState() {
     super.initState();
-    Future.microtask(() =>
-        context.read<ProductProvider>().fetchProducts());
+    Future.microtask(() async {
+      await context.read<ProductProvider>().fetchProducts();
+      _resetFilter();
+    });
+  }
+
+  void _resetFilter() {
+    final products = context.read<ProductProvider>().products;
+    setState(() => _filteredProducts = products);
+  }
+
+  void _onSearch(String query) {
+    final products = context.read<ProductProvider>().products;
+
+    if (query.isEmpty) {
+      setState(() => _filteredProducts = products);
+      return;
+    }
+
+    final q = query.toLowerCase();
+
+    setState(() {
+      _filteredProducts = products.where((p) {
+        return p.name.toLowerCase().contains(q) ||
+            p.category.toLowerCase().contains(q);
+      }).toList();
+    });
   }
 
   @override
@@ -27,6 +55,10 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
 
     return AdminLayout(
       title: 'Products',
+
+      /// 🔍 CONNECT GLOBAL SEARCH
+      onSearch: _onSearch,
+
       child: provider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : provider.errorMessage != null
@@ -38,7 +70,8 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                     children: [
                       // ================= HEADER =================
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
                         children: [
                           const Text(
                             'Product Inventory',
@@ -57,7 +90,8 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                   builder: (_) => AdminLayout(
                                     title: 'Add Product',
                                     showBack: true,
-                                    child: const AddProductScreen(),
+                                    child:
+                                        const AddProductScreen(),
                                   ),
                                 ),
                               );
@@ -74,125 +108,200 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             border: Border.all(
-                                color: const Color(0xFFE5E7EB)),
-                            borderRadius: BorderRadius.circular(6),
+                                color:
+                                    const Color(0xFFE5E7EB)),
+                            borderRadius:
+                                BorderRadius.circular(6),
                           ),
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.vertical,
-                            child: DataTable(
-                              columnSpacing: 24,
-                              headingRowColor:
-                                  MaterialStateProperty.all(
-                                      const Color(0xFFF9FAFB)),
-                              columns: const [
-                                DataColumn(label: Text('Product')),
-                                DataColumn(label: Text('Price')),
-                                DataColumn(label: Text('Stock')),
-                                DataColumn(label: Text('Status')),
-                                DataColumn(label: Text('Actions')),
-                              ],
-                              rows: provider.products.map((product) {
-                                final bool inStock = product.stock > 0;
+                          child: _filteredProducts.isEmpty
+                              ? const Center(
+                                  child:
+                                      Text('No products found'),
+                                )
+                              : SingleChildScrollView(
+                                  child: DataTable(
+                                    columnSpacing: 24,
+                                    headingRowColor:
+                                        MaterialStateProperty.all(
+                                      const Color(0xFFF9FAFB),
+                                    ),
+                                    columns: const [
+                                      DataColumn(
+                                          label:
+                                              Text('Product')),
+                                      DataColumn(
+                                          label:
+                                              Text('Price')),
+                                      DataColumn(
+                                          label:
+                                              Text('Stock')),
+                                      DataColumn(
+                                          label:
+                                              Text('Status')),
+                                      DataColumn(
+                                          label:
+                                              Text('Actions')),
+                                    ],
+                                    rows: _filteredProducts
+                                        .map((product) {
+                                      final bool inStock =
+                                          product.stock > 0;
 
-                                return DataRow(
-                                  cells: [
-                                    DataCell(
-                                      Row(
-                                        children: [
-                                          Image.network(
-                                            product.imagePath.isNotEmpty
-                                                ? product.imagePath
-                                                : 'https://via.placeholder.com/40',
-                                            width: 40,
-                                            height: 40,
-                                            fit: BoxFit.cover,
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Text(product.name,
-                                                  style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.w600)),
-                                              Text(product.category,
-                                                  style: const TextStyle(
-                                                      fontSize: 12,
-                                                      color: Colors.grey)),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Text('₹${product.price.toStringAsFixed(0)}'),
-                                    ),
-                                    DataCell(
-                                      Text(product.stock.toString()),
-                                    ),
-                                    DataCell(
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: inStock
-                                              ? Colors.green.withOpacity(0.1)
-                                              : Colors.red.withOpacity(0.1),
-                                          borderRadius:
-                                              BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          inStock ? 'Active' : 'Out of stock',
-                                          style: TextStyle(
-                                            color: inStock
-                                                ? Colors.green
-                                                : Colors.red,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Row(
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.edit,
-                                                size: 18),
-                                            onPressed: () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (_) => AdminLayout(
-                                                    title: 'Edit Product',
-                                                    showBack: true,
-                                                    child: AddProductScreen(
-                                                        product: product),
-                                                  ),
+                                      return DataRow(
+                                        cells: [
+                                          DataCell(
+                                            Row(
+                                              children: [
+                                                Image.network(
+                                                  product.imagePath
+                                                          .isNotEmpty
+                                                      ? product
+                                                          .imagePath
+                                                      : 'https://via.placeholder.com/40',
+                                                  width: 40,
+                                                  height: 40,
+                                                  fit:
+                                                      BoxFit.cover,
                                                 ),
-                                              );
-                                            },
+                                                const SizedBox(
+                                                    width:
+                                                        12),
+                                                Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment
+                                                          .start,
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .center,
+                                                  children: [
+                                                    Text(
+                                                      product
+                                                          .name,
+                                                      style: const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight
+                                                                  .w600),
+                                                    ),
+                                                    Text(
+                                                      product
+                                                          .category,
+                                                      style: const TextStyle(
+                                                          fontSize:
+                                                              12,
+                                                          color: Colors
+                                                              .grey),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                          IconButton(
-                                            icon: const Icon(Icons.delete,
-                                                size: 18,
-                                                color: Colors.red),
-                                            onPressed: () async {
-                                              await provider.deleteProduct(
-                                                  product.id, context);
-                                            },
+                                          DataCell(
+                                            Text(
+                                              '₹${product.price.toStringAsFixed(0)}',
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Text(product.stock
+                                                .toString()),
+                                          ),
+                                          DataCell(
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets
+                                                      .symmetric(
+                                                          horizontal:
+                                                              8,
+                                                          vertical:
+                                                              4),
+                                              decoration:
+                                                  BoxDecoration(
+                                                color: inStock
+                                                    ? Colors.green
+                                                        .withOpacity(
+                                                            0.1)
+                                                    : Colors.red
+                                                        .withOpacity(
+                                                            0.1),
+                                                borderRadius:
+                                                    BorderRadius
+                                                        .circular(
+                                                            4),
+                                              ),
+                                              child: Text(
+                                                inStock
+                                                    ? 'Active'
+                                                    : 'Out of stock',
+                                                style: TextStyle(
+                                                  color: inStock
+                                                      ? Colors.green
+                                                      : Colors.red,
+                                                  fontSize:
+                                                      12,
+                                                  fontWeight:
+                                                      FontWeight
+                                                          .w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Row(
+                                              children: [
+                                                IconButton(
+                                                  icon: const Icon(
+                                                      Icons.edit,
+                                                      size:
+                                                          18),
+                                                  onPressed:
+                                                      () {
+                                                    Navigator
+                                                        .push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder:
+                                                            (_) =>
+                                                                AdminLayout(
+                                                          title:
+                                                              'Edit Product',
+                                                          showBack:
+                                                              true,
+                                                          child:
+                                                              AddProductScreen(
+                                                            product:
+                                                                product,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                                IconButton(
+                                                  icon: const Icon(
+                                                    Icons
+                                                        .delete,
+                                                    size: 18,
+                                                    color:
+                                                        Colors.red,
+                                                  ),
+                                                  onPressed:
+                                                      () async {
+                                                    await provider
+                                                        .deleteProduct(
+                                                      product.id,
+                                                      context,
+                                                    );
+                                                    _resetFilter();
+                                                  },
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                         ],
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }).toList(),
-                            ),
-                          ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                ),
                         ),
                       ),
                     ],

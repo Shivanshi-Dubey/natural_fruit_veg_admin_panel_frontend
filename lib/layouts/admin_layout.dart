@@ -13,11 +13,15 @@ class AdminLayout extends StatelessWidget {
   final String title;
   final bool showBack;
 
+  /// 🔍 Optional global search callback
+  final ValueChanged<String>? onSearch;
+
   const AdminLayout({
     super.key,
     required this.child,
     required this.title,
     this.showBack = false,
+    this.onSearch,
   });
 
   void _navigate(BuildContext context, Widget screen) {
@@ -26,6 +30,12 @@ class AdminLayout extends StatelessWidget {
       MaterialPageRoute(builder: (_) => screen),
     );
   }
+
+  bool get _showSearch =>
+      onSearch != null &&
+      title != 'Dashboard' &&
+      title != 'Reports' &&
+      title != 'Settings';
 
   @override
   Widget build(BuildContext context) {
@@ -114,8 +124,6 @@ class AdminLayout extends StatelessWidget {
                   label: 'Settings',
                   screen: const SettingsScreen(),
                 ),
-
-                const SizedBox(height: 24),
               ],
             ),
           ),
@@ -135,8 +143,8 @@ class AdminLayout extends StatelessWidget {
                     ),
                   ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      /// LEFT: Back + Title
                       Row(
                         children: [
                           if (showBack)
@@ -153,6 +161,34 @@ class AdminLayout extends StatelessWidget {
                           ),
                         ],
                       ),
+
+                      const Spacer(),
+
+                      /// 🔍 GLOBAL SEARCH
+                      if (_showSearch)
+                        SizedBox(
+                          width: 260,
+                          height: 36,
+                          child: TextField(
+                            onChanged: onSearch,
+                            decoration: InputDecoration(
+                              hintText: 'Search...',
+                              prefixIcon:
+                                  const Icon(Icons.search, size: 18),
+                              contentPadding:
+                                  const EdgeInsets.symmetric(
+                                      vertical: 0),
+                              border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                      const SizedBox(width: 16),
+
+                      /// RIGHT: Profile
                       const CircleAvatar(
                         radius: 18,
                         child: Icon(Icons.person),

@@ -17,27 +17,58 @@ class ManageOrdersScreen extends StatefulWidget {
 
 class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
   String _statusFilter = 'all';
+  List<Order> _filteredOrders = [];
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(
-      () => context.read<OrderProvider>().fetchOrders(),
-    );
+    Future.microtask(() async {
+      await context.read<OrderProvider>().fetchOrders();
+      _resetFilter();
+    });
+  }
+
+  void _resetFilter() {
+    final orders = context.read<OrderProvider>().orders;
+    setState(() => _filteredOrders = orders);
+  }
+
+  /// 🔍 GLOBAL SEARCH
+  void _onSearch(String query) {
+    final orders = context.read<OrderProvider>().orders;
+
+    if (query.isEmpty) {
+      setState(() => _filteredOrders = orders);
+      return;
+    }
+
+    final q = query.toLowerCase();
+
+    setState(() {
+      _filteredOrders = orders.where((o) {
+        return o.customerName.toLowerCase().contains(q) ||
+            o.id.toLowerCase().contains(q) ||
+            (o.deliveryBoyName ?? '').toLowerCase().contains(q);
+      }).toList();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<OrderProvider>();
 
-    final orders = _statusFilter == 'all'
-        ? provider.orders
-        : provider.orders
+    final visibleOrders = _statusFilter == 'all'
+        ? _filteredOrders
+        : _filteredOrders
             .where((o) => o.status == _statusFilter)
             .toList();
 
     return AdminLayout(
       title: 'Orders',
+
+      /// 🔍 CONNECT SEARCH
+      onSearch: _onSearch,
+
       child: provider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : provider.errorMessage != null
@@ -54,7 +85,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
                     children: [
                       /// ================= HEADER =================
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
                         children: [
                           const Text(
                             'Orders Management',
@@ -67,16 +99,21 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
                             value: _statusFilter,
                             items: const [
                               DropdownMenuItem(
-                                  value: 'all', child: Text('All')),
+                                  value: 'all',
+                                  child: Text('All')),
                               DropdownMenuItem(
-                                  value: 'placed', child: Text('Placed')),
+                                  value: 'placed',
+                                  child: Text('Placed')),
                               DropdownMenuItem(
-                                  value: 'accepted', child: Text('Accepted')),
+                                  value: 'accepted',
+                                  child: Text('Accepted')),
                               DropdownMenuItem(
-                                  value: 'assigned', child: Text('Assigned')),
+                                  value: 'assigned',
+                                  child: Text('Assigned')),
                               DropdownMenuItem(
                                   value: 'out_for_delivery',
-                                  child: Text('Out for delivery')),
+                                  child:
+                                      Text('Out for delivery')),
                               DropdownMenuItem(
                                   value: 'delivered',
                                   child: Text('Delivered')),
@@ -98,78 +135,123 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             border: Border.all(
-                                color: const Color(0xFFE5E7EB)),
-                            borderRadius: BorderRadius.circular(6),
+                                color:
+                                    const Color(0xFFE5E7EB)),
+                            borderRadius:
+                                BorderRadius.circular(6),
                           ),
-                          child: SingleChildScrollView(
-                            child: DataTable(
-                              columnSpacing: 24,
-                              headingRowColor:
-                                  MaterialStateProperty.all(
-                                      const Color(0xFFF9FAFB)),
-                              columns: const [
-                                DataColumn(label: Text('Order ID')),
-                                DataColumn(label: Text('Customer')),
-                                DataColumn(label: Text('Amount')),
-                                DataColumn(label: Text('Payment')),
-                                DataColumn(label: Text('Status')),
-                                DataColumn(label: Text('Delivery')),
-                                DataColumn(label: Text('Actions')),
-                              ],
-                              rows: orders.map((order) {
-                                return DataRow(
-                                  cells: [
-                                    DataCell(Text(
-                                        order.id.substring(order.id.length - 6))),
-                                    DataCell(Text(order.customerName)),
-                                    DataCell(Text(
-                                        '₹${order.totalPrice.toStringAsFixed(0)}')),
-                                    DataCell(
-                                      Text(
-                                        order.paymentStatus.toUpperCase(),
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          color: order.paymentStatus == 'paid'
-                                              ? Colors.green
-                                              : Colors.orange,
-                                        ),
-                                      ),
+                          child: visibleOrders.isEmpty
+                              ? const Center(
+                                  child:
+                                      Text('No orders found'),
+                                )
+                              : SingleChildScrollView(
+                                  child: DataTable(
+                                    columnSpacing: 24,
+                                    headingRowColor:
+                                        MaterialStateProperty.all(
+                                      const Color(0xFFF9FAFB),
                                     ),
-                                    DataCell(_StatusChip(order.status)),
-                                    DataCell(Text(order.deliveryBoyName ??
-                                        'Not assigned')),
-                                    DataCell(
-                                      Row(
-                                        children: [
-                                          if (order.status == 'placed')
-                                            TextButton(
-                                              onPressed: () async {
-                                                await provider.acceptOrder(
-                                                    order.id);
-                                                await provider.fetchOrders();
-                                              },
-                                              child:
-                                                  const Text('Accept'),
-                                            ),
-                                          if (order.status == 'accepted')
-                                            TextButton(
-                                              onPressed: () =>
-                                                  _showAssignDialog(
-                                                context,
-                                                provider,
-                                                order.id,
+                                    columns: const [
+                                      DataColumn(
+                                          label:
+                                              Text('Order ID')),
+                                      DataColumn(
+                                          label:
+                                              Text('Customer')),
+                                      DataColumn(
+                                          label:
+                                              Text('Amount')),
+                                      DataColumn(
+                                          label:
+                                              Text('Payment')),
+                                      DataColumn(
+                                          label:
+                                              Text('Status')),
+                                      DataColumn(
+                                          label:
+                                              Text('Delivery')),
+                                      DataColumn(
+                                          label:
+                                              Text('Actions')),
+                                    ],
+                                    rows: visibleOrders
+                                        .map((order) {
+                                      return DataRow(
+                                        cells: [
+                                          DataCell(Text(
+                                            order.id.substring(
+                                                order.id.length -
+                                                    6),
+                                          )),
+                                          DataCell(Text(
+                                              order.customerName)),
+                                          DataCell(Text(
+                                            '₹${order.totalPrice.toStringAsFixed(0)}',
+                                          )),
+                                          DataCell(
+                                            Text(
+                                              order.paymentStatus
+                                                  .toUpperCase(),
+                                              style: TextStyle(
+                                                fontWeight:
+                                                    FontWeight.w600,
+                                                color: order
+                                                            .paymentStatus ==
+                                                        'paid'
+                                                    ? Colors.green
+                                                    : Colors.orange,
                                               ),
-                                              child:
-                                                  const Text('Assign'),
                                             ),
+                                          ),
+                                          DataCell(
+                                            _StatusChip(
+                                                order.status),
+                                          ),
+                                          DataCell(Text(
+                                            order.deliveryBoyName ??
+                                                'Not assigned',
+                                          )),
+                                          DataCell(
+                                            Row(
+                                              children: [
+                                                if (order.status ==
+                                                    'placed')
+                                                  TextButton(
+                                                    onPressed:
+                                                        () async {
+                                                      await provider
+                                                          .acceptOrder(
+                                                              order
+                                                                  .id);
+                                                      await provider
+                                                          .fetchOrders();
+                                                      _resetFilter();
+                                                    },
+                                                    child: const Text(
+                                                        'Accept'),
+                                                  ),
+                                                if (order.status ==
+                                                    'accepted')
+                                                  TextButton(
+                                                    onPressed:
+                                                        () =>
+                                                            _showAssignDialog(
+                                                      context,
+                                                      provider,
+                                                      order.id,
+                                                    ),
+                                                    child: const Text(
+                                                        'Assign'),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
                                         ],
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }).toList(),
-                            ),
-                          ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                ),
                         ),
                       ),
                     ],
@@ -201,21 +283,25 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
                   : DropdownButton<DeliveryBoy>(
                       isExpanded: true,
                       value: selected,
-                      hint: const Text('Select delivery boy'),
+                      hint:
+                          const Text('Select delivery boy'),
                       items: boys
                           .map(
                             (b) => DropdownMenuItem(
                               value: b,
-                              child: Text('${b.name} (${b.phone})'),
+                              child:
+                                  Text('${b.name} (${b.phone})'),
                             ),
                           )
                           .toList(),
-                      onChanged: (val) => setState(() => selected = val),
+                      onChanged: (val) =>
+                          setState(() => selected = val),
                     ),
               actions: [
                 TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel')),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
                 ElevatedButton(
                   onPressed: selected == null
                       ? null
@@ -223,7 +309,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
                           await provider.assignDeliveryBoy(
                               orderId, selected!.id);
                           await provider.fetchOrders();
-                          if (context.mounted) Navigator.pop(context);
+                          _resetFilter();
+                          if (context.mounted)
+                            Navigator.pop(context);
                         },
                   child: const Text('Assign'),
                 ),
@@ -279,7 +367,8 @@ class _StatusChip extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding:
+          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.12),
         borderRadius: BorderRadius.circular(4),
