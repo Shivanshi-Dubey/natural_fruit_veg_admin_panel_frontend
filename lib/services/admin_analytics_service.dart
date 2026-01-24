@@ -5,21 +5,49 @@ class AdminAnalyticsService {
   static const String baseUrl =
       "https://naturalfruitveg.com/api/admin/analytics";
 
-  /// 🔴 Dead Products
+  /// 🔴 DEAD PRODUCTS (Never sold)
   static Future<List<dynamic>> fetchDeadProducts() async {
     try {
-      final res = await http.get(Uri.parse("$baseUrl/dead-products"));
+      final res = await http.get(
+        Uri.parse("$baseUrl/dead-products"),
+      );
 
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
         return decoded is List ? decoded : [];
       } else {
-        print("❌ Dead products error: ${res.body}");
+        debugPrint("❌ Dead products error: ${res.body}");
         return [];
       }
     } catch (e) {
-      print("❌ Dead products exception: $e");
+      debugPrint("❌ Dead products exception: $e");
       return [];
     }
+  }
+
+  /// 🟠 LOW STOCK PRODUCTS
+  static Future<List<dynamic>> fetchLowStockProducts() async {
+    try {
+      final res = await http.get(
+        Uri.parse("$baseUrl/low-stock"),
+      );
+
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        return decoded['products'] ?? [];
+      } else {
+        debugPrint("❌ Low stock error: ${res.body}");
+        return [];
+      }
+    } catch (e) {
+      debugPrint("❌ Low stock exception: $e");
+      return [];
+    }
+  }
+
+  /// 📊 FUTURE: Sales summary
+  static Future<Map<String, dynamic>> fetchSalesSummary() async {
+    // Placeholder for future reports
+    return {};
   }
 }
