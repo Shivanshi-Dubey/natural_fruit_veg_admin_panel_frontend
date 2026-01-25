@@ -6,6 +6,8 @@ import 'providers/product_provider.dart';
 import 'providers/order_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/supplier_provider.dart';
+import 'providers/purchase_invoice_provider.dart';
+import 'providers/grn_provider.dart';
 
 // Screens
 import 'screens/manage_products_screen.dart';
@@ -28,6 +30,9 @@ class AdminApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => OrderProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => SupplierProvider()),
+        ChangeNotifierProvider(create: (_) => PurchaseInvoiceProvider()),
+        ChangeNotifierProvider(create: (_) => GRNProvider()),
+
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, theme, _) {
