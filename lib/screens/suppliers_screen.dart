@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../layouts/admin_layout.dart';
 import '../providers/supplier_provider.dart';
-// import 'add_supplier_screen.dart'; // uncomment when screen is ready
+import 'add_supplier_screen.dart'; // uncomment when screen is ready
 // import 'supplier_details_screen.dart';
 
 class SuppliersScreen extends StatefulWidget {
@@ -57,13 +57,13 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                             icon: const Icon(Icons.add),
                             label: const Text('Add Supplier'),
                             onPressed: () {
-                              // TODO: AddSupplierScreen
-                              // Navigator.push(
-                              //   context,
-                              //   MaterialPageRoute(
-                              //     builder: (_) => const AddSupplierScreen(),
-                              //   ),
-                              // );
+              
+                               Navigator.push(
+                                 context,
+                                 MaterialPageRoute(
+                                   builder: (_) => const AddSupplierScreen(),
+                                 ),
+                              );
                             },
                           ),
                         ],
