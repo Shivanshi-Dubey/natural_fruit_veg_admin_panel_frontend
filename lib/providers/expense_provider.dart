@@ -6,7 +6,7 @@ import '../models/expense_model.dart';
 
 class ExpenseProvider extends ChangeNotifier {
   final String _baseUrl =
-      'http://localhost:5000/api/admin/expenses';
+      'https://naturalfruitveg.com/api/admin/expenses';
 
   bool isLoading = false;
   List<Expense> expenses = [];
