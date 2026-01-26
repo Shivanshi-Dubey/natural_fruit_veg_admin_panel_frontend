@@ -6,7 +6,7 @@ import '../models/grn_model.dart';
 
 class GRNProvider extends ChangeNotifier {
   final String baseUrl =
-      'https://naturalfruitveg.com/api/admin/grns';
+      'https://naturalfruitveg.com/api/admin/grn';
 
   bool isLoading = false;
   List<GRN> grns = [];

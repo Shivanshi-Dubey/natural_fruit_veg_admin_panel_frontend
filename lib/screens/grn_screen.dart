@@ -1,12 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../layouts/admin_layout.dart';
+import '../providers/grn_provider.dart';
+import '../models/grn_model.dart';
 
-class GrnScreen extends StatelessWidget {
+class GrnScreen extends StatefulWidget {
   const GrnScreen({super.key});
 
   @override
+  State<GrnScreen> createState() => _GrnScreenState();
+}
+
+class _GrnScreenState extends State<GrnScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    /// Load GRNs from backend
+    Future.microtask(() {
+      context.read<GRNProvider>().fetchGRNs();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final provider = context.watch<GRNProvider>();
+
     return AdminLayout(
       title: 'GRN (Goods Receipt Note)',
       child: Padding(
@@ -50,30 +70,52 @@ class GrnScreen extends StatelessWidget {
                   border: Border.all(color: const Color(0xFFE5E7EB)),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: DataTable(
-                  columns: const [
-                    DataColumn(label: Text('GRN No')),
-                    DataColumn(label: Text('Supplier')),
-                    DataColumn(label: Text('Date')),
-                    DataColumn(label: Text('Status')),
-                  ],
-                  rows: const [
-                    /// Dummy row (safe placeholder)
-                    DataRow(
-                      cells: [
-                        DataCell(Text('GRN-001')),
-                        DataCell(Text('Fresh Farm Supplier')),
-                        DataCell(Text('2026-01-26')),
-                        DataCell(
-                          Text(
-                            'Received',
-                            style: TextStyle(color: Colors.green),
+                child: provider.isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : provider.grns.isEmpty
+                        ? const Center(child: Text('No GRNs found'))
+                        : SingleChildScrollView(
+                            child: DataTable(
+                              columns: const [
+                                DataColumn(label: Text('GRN No')),
+                                DataColumn(label: Text('Supplier')),
+                                DataColumn(label: Text('Date')),
+                                DataColumn(label: Text('Status')),
+                              ],
+                              rows: provider.grns.map((GRN g) {
+                                return DataRow(
+                                  cells: [
+                                    DataCell(
+                                      Text(
+                                        g.grnNumber,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
+                                    DataCell(Text(g.supplierName)),
+                                    DataCell(
+                                      Text(
+                                        g.createdAt
+                                            .toLocal()
+                                            .toString()
+                                            .substring(0, 10),
+                                      ),
+                                    ),
+                                    DataCell(
+                                      Text(
+                                        g.status,
+                                        style: TextStyle(
+                                          color: g.status == 'Received'
+                                              ? Colors.green
+                                              : Colors.orange,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }).toList(),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
               ),
             ),
           ],
@@ -107,38 +149,31 @@ class CreateGrnScreen extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
-
             const SizedBox(height: 24),
 
-            /// ===== SUPPLIER =====
             TextField(
               decoration: InputDecoration(
-                labelText: 'Supplier Name',
+                labelText: 'Supplier',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
             ),
-
             const SizedBox(height: 16),
 
-            /// ===== INVOICE =====
             TextField(
               decoration: InputDecoration(
-                labelText: 'Purchase Invoice No',
+                labelText: 'Purchase Invoice',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
             ),
-
             const SizedBox(height: 16),
 
-            /// ===== DATE =====
             TextField(
               decoration: InputDecoration(
-                labelText: 'Received Date',
-                hintText: 'YYYY-MM-DD',
+                labelText: 'Quantity',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -147,12 +182,11 @@ class CreateGrnScreen extends StatelessWidget {
 
             const SizedBox(height: 32),
 
-            /// ===== ACTION =====
             ElevatedButton(
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('GRN created (placeholder)'),
+                    content: Text('GRN creation coming next phase'),
                   ),
                 );
                 Navigator.pop(context);
