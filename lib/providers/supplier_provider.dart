@@ -55,4 +55,16 @@ class SupplierProvider extends ChangeNotifier {
       );
     }
   }
+
+  Future<void> deleteSupplier(String id) async {
+  try {
+    await SupplierService.deleteSupplier(id);
+    suppliers.removeWhere((s) => s.id == id);
+    notifyListeners();
+  } catch (e) {
+    error = 'Failed to delete supplier';
+    notifyListeners();
+  }
+}
+
 }

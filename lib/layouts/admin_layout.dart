@@ -8,6 +8,13 @@ import '../screens/customers_screen.dart';
 import '../screens/reports_screen.dart';
 import '../screens/settings_screen.dart';
 
+// 🔹 Purchase & Inventory
+import '../screens/suppliers_screen.dart';
+import '../screens/purchase_invoices_screen.dart';
+import '../screens/purchase_returns_screen.dart';
+import '../screens/grn_screen.dart';
+import '../screens/expenses_screen.dart';
+
 class AdminLayout extends StatelessWidget {
   final Widget child;
   final String title;
@@ -63,6 +70,7 @@ class AdminLayout extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
+                // ================= DASHBOARD =================
                 _menuItem(
                   context,
                   icon: Icons.dashboard,
@@ -70,6 +78,7 @@ class AdminLayout extends StatelessWidget {
                   screen: const DashboardScreen(),
                 ),
 
+                // ================= SALES =================
                 _sectionTitle('Sales'),
                 _expandableSection(
                   icon: Icons.shopping_cart,
@@ -83,6 +92,7 @@ class AdminLayout extends StatelessWidget {
                   ],
                 ),
 
+                // ================= PRODUCTS =================
                 _sectionTitle('Products'),
                 _expandableSection(
                   icon: Icons.inventory,
@@ -101,6 +111,41 @@ class AdminLayout extends StatelessWidget {
                   ],
                 ),
 
+                // ================= PURCHASE & INVENTORY =================
+                _sectionTitle('Purchase & Inventory'),
+                _expandableSection(
+                  icon: Icons.local_shipping,
+                  title: 'Purchase',
+                  children: [
+                    _subMenuItem(
+                      context,
+                      'Suppliers',
+                      const SuppliersScreen(),
+                    ),
+                    _subMenuItem(
+                      context,
+                      'Purchase Invoices',
+                      const PurchaseInvoicesScreen(),
+                    ),
+                    _subMenuItem(
+                      context,
+                      'Purchase Returns',
+                      const PurchaseReturnsScreen(),
+                    ),
+                    _subMenuItem(
+                      context,
+                      'GRN (Receipt)',
+                      const GrnScreen(),
+                    ),
+                    _subMenuItem(
+                      context,
+                      'Expenses',
+                      const ExpensesScreen(),
+                    ),
+                  ],
+                ),
+
+                // ================= CUSTOMERS =================
                 _sectionTitle('Customers'),
                 _menuItem(
                   context,
@@ -109,6 +154,7 @@ class AdminLayout extends StatelessWidget {
                   screen: const CustomersScreen(),
                 ),
 
+                // ================= REPORTS =================
                 _sectionTitle('Reports'),
                 _menuItem(
                   context,
@@ -117,6 +163,7 @@ class AdminLayout extends StatelessWidget {
                   screen: const ReportsScreen(),
                 ),
 
+                // ================= SETTINGS =================
                 _sectionTitle('Settings'),
                 _menuItem(
                   context,
@@ -176,11 +223,9 @@ class AdminLayout extends StatelessWidget {
                               prefixIcon:
                                   const Icon(Icons.search, size: 18),
                               contentPadding:
-                                  const EdgeInsets.symmetric(
-                                      vertical: 0),
+                                  const EdgeInsets.symmetric(vertical: 0),
                               border: OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                             ),
                           ),
@@ -188,7 +233,7 @@ class AdminLayout extends StatelessWidget {
 
                       const SizedBox(width: 16),
 
-                      /// RIGHT: Profile
+                      /// PROFILE
                       const CircleAvatar(
                         radius: 18,
                         child: Icon(Icons.person),
@@ -253,15 +298,10 @@ class AdminLayout extends StatelessWidget {
     required List<Widget> children,
   }) {
     return Theme(
-      data: ThemeData.dark().copyWith(
-        dividerColor: Colors.transparent,
-      ),
+      data: ThemeData.dark().copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
         leading: Icon(icon, color: Colors.white, size: 20),
-        title: Text(
-          title,
-          style: const TextStyle(color: Colors.white),
-        ),
+        title: Text(title, style: const TextStyle(color: Colors.white)),
         iconColor: Colors.white,
         collapsedIconColor: Colors.white54,
         children: children,
