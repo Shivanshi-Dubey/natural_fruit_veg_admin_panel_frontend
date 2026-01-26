@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../layouts/admin_layout.dart';
 import '../providers/expense_provider.dart';
+import 'add_expense_screen.dart';
 
 
 class ExpensesScreen extends StatefulWidget {
