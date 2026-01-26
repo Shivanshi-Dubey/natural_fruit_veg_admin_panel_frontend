@@ -135,7 +135,9 @@ class AdminLayout extends StatelessWidget {
                     _subMenuItem(
                       context,
                       'GRN (Receipt)',
-                      const GrnScreen(),
+                      const GrnScreen(
+                         purchaseInvoiceId: 'all',
+                      ),
                     ),
                     _subMenuItem(
                       context,

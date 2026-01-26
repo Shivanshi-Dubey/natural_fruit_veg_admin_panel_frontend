@@ -6,22 +6,29 @@ import '../providers/grn_provider.dart';
 import '../models/grn_model.dart';
 
 class GrnScreen extends StatefulWidget {
-  const GrnScreen({super.key});
+  final String purchaseInvoiceId;
+
+  const GrnScreen({
+    super.key,
+    required this.purchaseInvoiceId,
+  });
+
 
   @override
   State<GrnScreen> createState() => _GrnScreenState();
 }
 
 class _GrnScreenState extends State<GrnScreen> {
-  @override
-  void initState() {
-    super.initState();
+ @override
+void initState() {
+  super.initState();
+  Future.microtask(() {
+    context
+        .read<GRNProvider>()
+        .fetchGRNsByInvoice(widget.purchaseInvoiceId);
+  });
+}
 
-    /// Load GRNs from backend
-    Future.microtask(() {
-      context.read<GRNProvider>().fetchGRNs();
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,29 +42,12 @@ class _GrnScreenState extends State<GrnScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             /// ===== HEADER =====
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Goods Receipt Notes',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.add),
-                  label: const Text('Create GRN'),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const CreateGrnScreen(),
-                      ),
-                    );
-                  },
-                ),
-              ],
+            const Text(
+              'Goods Receipt Notes',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
             ),
 
             const SizedBox(height: 16),
@@ -75,7 +65,12 @@ class _GrnScreenState extends State<GrnScreen> {
                     : provider.grns.isEmpty
                         ? const Center(child: Text('No GRNs found'))
                         : SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
                             child: DataTable(
+                              headingRowColor:
+                                  MaterialStateProperty.all(
+                                const Color(0xFFF9FAFB),
+                              ),
                               columns: const [
                                 DataColumn(label: Text('GRN No')),
                                 DataColumn(label: Text('Supplier')),
@@ -85,14 +80,20 @@ class _GrnScreenState extends State<GrnScreen> {
                               rows: provider.grns.map((GRN g) {
                                 return DataRow(
                                   cells: [
+                                    /// GRN NUMBER
                                     DataCell(
                                       Text(
                                         g.grnNumber,
                                         style: const TextStyle(
-                                            fontWeight: FontWeight.w600),
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ),
+
+                                    /// SUPPLIER
                                     DataCell(Text(g.supplierName)),
+
+                                    /// DATE
                                     DataCell(
                                       Text(
                                         g.createdAt
@@ -101,16 +102,9 @@ class _GrnScreenState extends State<GrnScreen> {
                                             .substring(0, 10),
                                       ),
                                     ),
-                                    DataCell(
-                                      Text(
-                                        g.status,
-                                        style: TextStyle(
-                                          color: g.status == 'Received'
-                                              ? Colors.green
-                                              : Colors.orange,
-                                        ),
-                                      ),
-                                    ),
+
+                                    /// STATUS
+                                    DataCell(_statusChip(g.status)),
                                   ],
                                 );
                               }).toList(),
@@ -119,6 +113,39 @@ class _GrnScreenState extends State<GrnScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// ===== STATUS CHIP =====
+  Widget _statusChip(String status) {
+    Color color;
+
+    switch (status) {
+      case 'received':
+        color = Colors.green;
+        break;
+      case 'cancelled':
+        color = Colors.red;
+        break;
+      default:
+        color = Colors.orange;
+    }
+
+    return Container(
+      padding:
+          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: color,
         ),
       ),
     );

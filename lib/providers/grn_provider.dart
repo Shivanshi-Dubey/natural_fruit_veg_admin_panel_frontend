@@ -11,20 +11,25 @@ class GRNProvider extends ChangeNotifier {
   bool isLoading = false;
   List<GRN> grns = [];
 
-  Future<void> fetchGRNs() async {
-    try {
-      isLoading = true;
-      notifyListeners();
+  Future<void> fetchGRNsByInvoice(String invoiceId) async {
+  try {
+    isLoading = true;
+    notifyListeners();
 
-      final res = await http.get(Uri.parse(baseUrl));
-      final data = jsonDecode(res.body) as List;
+    final url = invoiceId == 'all'
+        ? baseUrl
+        : '$baseUrl?purchaseInvoice=$invoiceId';
 
-      grns = data.map((e) => GRN.fromJson(e)).toList();
-    } catch (e) {
-      debugPrint(e.toString());
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
+    final res = await http.get(Uri.parse(url));
+    final data = jsonDecode(res.body) as List;
+
+    grns = data.map((e) => GRN.fromJson(e)).toList();
+  } catch (e) {
+    debugPrint(e.toString());
+  } finally {
+    isLoading = false;
+    notifyListeners();
   }
+}
+
 }

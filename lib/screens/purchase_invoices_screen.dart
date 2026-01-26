@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../layouts/admin_layout.dart';
 import '../providers/purchase_invoice_provider.dart';
 import '../screens/create_purchase_invoice_screen.dart';
-
+import '../screens/grn_screen.dart';
 
 class PurchaseInvoicesScreen extends StatefulWidget {
   const PurchaseInvoicesScreen({super.key});
@@ -19,14 +19,14 @@ class _PurchaseInvoicesScreenState
   @override
   void initState() {
     super.initState();
-    Future.microtask(() =>
-        context.read<PurchaseInvoiceProvider>().fetchInvoices());
+    Future.microtask(
+      () => context.read<PurchaseInvoiceProvider>().fetchInvoices(),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider =
-        context.watch<PurchaseInvoiceProvider>();
+    final provider = context.watch<PurchaseInvoiceProvider>();
 
     return AdminLayout(
       title: 'Purchase Invoices',
@@ -39,7 +39,7 @@ class _PurchaseInvoicesScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      /// HEADER
+                      /// ================= HEADER =================
                       Row(
                         mainAxisAlignment:
                             MainAxisAlignment.spaceBetween,
@@ -47,34 +47,36 @@ class _PurchaseInvoicesScreenState
                           const Text(
                             'Purchase Invoice List',
                             style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600),
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           ElevatedButton.icon(
                             icon: const Icon(Icons.add),
                             label: const Text('Create Invoice'),
                             onPressed: () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const CreatePurchaseInvoiceScreen(),
-    ),
-  );
-},
-
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      const CreatePurchaseInvoiceScreen(),
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),
 
                       const SizedBox(height: 16),
 
-                      /// TABLE
+                      /// ================= TABLE =================
                       Expanded(
                         child: Container(
                           decoration: BoxDecoration(
                             color: Colors.white,
                             border: Border.all(
-                                color: const Color(0xFFE5E7EB)),
+                              color: const Color(0xFFE5E7EB),
+                            ),
                             borderRadius:
                                 BorderRadius.circular(6),
                           ),
@@ -82,11 +84,12 @@ class _PurchaseInvoicesScreenState
                               ? const Center(
                                   child: Text(
                                     'No purchase invoices found',
-                                    style: TextStyle(
-                                        color: Colors.grey),
+                                    style:
+                                        TextStyle(color: Colors.grey),
                                   ),
                                 )
                               : SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
                                   child: DataTable(
                                     headingRowColor:
                                         MaterialStateProperty.all(
@@ -103,6 +106,8 @@ class _PurchaseInvoicesScreenState
                                           label: Text('Status')),
                                       DataColumn(
                                           label: Text('Date')),
+                                      DataColumn(
+                                          label: Text('Action')),
                                     ],
                                     rows: provider.invoices.map((i) {
                                       return DataRow(
@@ -111,12 +116,45 @@ class _PurchaseInvoicesScreenState
                                               Text(i.invoiceNumber)),
                                           DataCell(
                                               Text(i.supplierName)),
-                                          DataCell(Text(
-                                              '₹${i.totalAmount.toStringAsFixed(0)}')),
-                                          DataCell(_statusChip(i.status)),
-                                          DataCell(Text(
-                                            '${i.createdAt.day}/${i.createdAt.month}/${i.createdAt.year}',
-                                          )),
+                                          DataCell(
+                                            Text(
+                                              '₹${i.totalAmount.toStringAsFixed(0)}',
+                                            ),
+                                          ),
+                                          DataCell(
+                                              _statusChip(i.status)),
+                                          DataCell(
+                                            Text(
+                                              '${i.createdAt.day}/${i.createdAt.month}/${i.createdAt.year}',
+                                            ),
+                                          ),
+
+                                          /// ===== CREATE GRN BUTTON =====
+                                          DataCell(
+                                            i.status == 'pending'
+                                                ? ElevatedButton(
+                                                    onPressed: () {
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                          builder: (_) =>
+                                                              GrnScreen(
+                                                            purchaseInvoiceId:
+                                                                i.id,
+                                                          ),
+                                                        ),
+                                                      );
+                                                    },
+                                                    child: const Text(
+                                                        'Create GRN'),
+                                                  )
+                                                : const Text(
+                                                    '—',
+                                                    style: TextStyle(
+                                                        color:
+                                                            Colors.grey),
+                                                  ),
+                                          ),
                                         ],
                                       );
                                     }).toList(),
@@ -130,10 +168,12 @@ class _PurchaseInvoicesScreenState
     );
   }
 
+  /// ================= STATUS CHIP =================
   Widget _statusChip(String status) {
     Color color;
+
     switch (status) {
-      case 'approved':
+      case 'received':
         color = Colors.green;
         break;
       case 'cancelled':
