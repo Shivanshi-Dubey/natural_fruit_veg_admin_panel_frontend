@@ -6,7 +6,7 @@ import '../models/purchase_invoice_model.dart';
 
 class PurchaseInvoiceProvider extends ChangeNotifier {
   final String baseUrl =
-      'http://localhost:5000/api/admin/purchase-invoices';
+      'https://naturalfruitveg.com/api/admin/purchase-invoices';
 
   bool isLoading = false;
   String? error;
