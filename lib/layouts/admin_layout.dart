@@ -147,6 +147,38 @@ class AdminLayout extends StatelessWidget {
                   ],
                 ),
 
+                _sectionTitle('FINANCE'),
+
+_expandableSection(
+  icon: Icons.account_balance_wallet,
+  title: 'Finance',
+  children: [
+
+    _subSectionTitle('Master'),
+    _subMenuItem(context, 'Accounts', const AccountsScreen()),
+    _subMenuItem(context, 'Banks', const BanksScreen()),
+    _subMenuItem(context, 'Contacts', const ContactsScreen()),
+    _subMenuItem(context, 'Opening Balance', const OpeningBalanceScreen()),
+
+    _subSectionTitle('Receipts'),
+    _subMenuItem(context, 'Receipt', const AddReceiptScreen()),
+    _subMenuItem(context, 'Receipt List', const ReceiptsScreen()),
+
+    _subSectionTitle('Payments'),
+    _subMenuItem(context, 'Payment', const AddPaymentScreen()),
+    _subMenuItem(context, 'Payment List', const PaymentsScreen()),
+
+    _subSectionTitle('Cash / Bank'),
+    _subMenuItem(context, 'Contra Voucher', const ContraVoucherScreen()),
+    _subMenuItem(context, 'Contra Voucher List', const ContraVoucherListScreen()),
+
+    _subSectionTitle('Reconciliation'),
+    _subMenuItem(context, 'Bank Reconciliation', const BankReconciliationScreen()),
+    _subMenuItem(context, 'Party Reconciliation', const PartyReconciliationScreen()),
+  ],
+),
+
+
                 // ================= CUSTOMERS =================
                 _sectionTitle('Customers'),
                 _menuItem(
