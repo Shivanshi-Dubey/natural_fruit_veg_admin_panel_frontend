@@ -14,6 +14,17 @@ import '../screens/purchase_invoices_screen.dart';
 import '../screens/purchase_returns_screen.dart';
 import '../screens/grn_screen.dart';
 import '../screens/expenses_screen.dart';
+import '../screens/accounts_screen.dart';
+import '../screens/banks_screen.dart';
+import '../screens/opening_balance_screen.dart';
+import '../screens/add_receipt_screen.dart';
+import '../screens/receipts_screen.dart';
+import '../screens/add_payment_screen.dart';
+import '../screens/payments_screen.dart';
+import '../screens/contra_voucher_screen.dart';
+import '../screens/contra_voucher_list_screen.dart';
+import '../screens/bank_reconciliation_screen.dart';
+import '../screens/party_reconciliation_screen.dart';
 
 class AdminLayout extends StatelessWidget {
   final Widget child;
@@ -157,7 +168,6 @@ _expandableSection(
     _subSectionTitle('Master'),
     _subMenuItem(context, 'Accounts', const AccountsScreen()),
     _subMenuItem(context, 'Banks', const BanksScreen()),
-    _subMenuItem(context, 'Contacts', const ContactsScreen()),
     _subMenuItem(context, 'Opening Balance', const OpeningBalanceScreen()),
 
     _subSectionTitle('Receipts'),
@@ -302,6 +312,21 @@ _expandableSection(
     );
   }
 
+  Widget _subSectionTitle(String title) {
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(32, 10, 20, 6),
+    child: Text(
+      title.toUpperCase(),
+      style: const TextStyle(
+        color: Colors.white38,
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  );
+}
+
+
   Widget _menuItem(
     BuildContext context, {
     required IconData icon,
@@ -326,6 +351,21 @@ _expandableSection(
     );
   }
 
+  Widget _subMenuItem(
+    BuildContext context,
+    String label,
+    Widget screen,
+  ) {
+    return ListTile(
+      contentPadding: const EdgeInsets.only(left: 72),
+      title: Text(
+        label,
+        style: const TextStyle(color: Colors.white70, fontSize: 14),
+      ),
+      onTap: () => _navigate(context, screen),
+    );
+  }
+
   Widget _expandableSection({
     required IconData icon,
     required String title,
@@ -340,21 +380,6 @@ _expandableSection(
         collapsedIconColor: Colors.white54,
         children: children,
       ),
-    );
-  }
-
-  Widget _subMenuItem(
-    BuildContext context,
-    String label,
-    Widget screen,
-  ) {
-    return ListTile(
-      contentPadding: const EdgeInsets.only(left: 72),
-      title: Text(
-        label,
-        style: const TextStyle(color: Colors.white70, fontSize: 14),
-      ),
-      onTap: () => _navigate(context, screen),
     );
   }
 }
