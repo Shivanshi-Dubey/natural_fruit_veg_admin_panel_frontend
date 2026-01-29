@@ -24,7 +24,7 @@ class Order {
   final String customerName;
   final List<OrderItem> items;
   final double deliveryCharge;
-  final String status;
+  final String orderStatus;
   final String paymentStatus;
   final DateTime createdAt;
   final String? deliveryBoyName;
@@ -35,13 +35,15 @@ class Order {
     required this.customerName,
     required this.items,
     required this.deliveryCharge,
-    required this.status,
+    required this.orderStatus,
     required this.paymentStatus,
     required this.createdAt,
     this.deliveryBoyName,
     this.deliveryBoyId,
   });
 
+ String get status => orderStatus;
+ 
   factory Order.fromJson(Map<String, dynamic> json) {
     final user = json['user'];
     final deliveryBoy = json['deliveryBoy'];
@@ -74,7 +76,7 @@ class Order {
       customerName: resolvedCustomerName,
       items: productsJson.map((e) => OrderItem.fromJson(e)).toList(),
       deliveryCharge: (json['deliveryCharge'] ?? 0).toDouble(),
-      status: (json['status'] ?? 'placed') as String,
+      orderStatus: (json['orderStatus'] ?? 'placed') as String,
       paymentStatus: (json['paymentStatus'] ?? 'pending') as String,
       createdAt: createdAtRaw != null
           ? DateTime.parse(createdAtRaw as String)

@@ -18,12 +18,12 @@ class OrderProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  /// 🔴 COUNT OF NEW (PLACED) ORDERS – for badge
+  /// 🔴 COUNT OF NEW (PLACED) ORDERS
   int get newOrdersCount =>
-      _orders.where((o) => o.status == 'placed').length;
+      _orders.where((o) => o.orderStatus == 'placed').length;
 
   // ================= BASE URL =================
-  final String baseUrl = 'https://naturalfruitveg.com/api/orders/admin';
+  final String baseUrl = 'https://naturalfruitveg.com/api/orders';
 
   // ================= FETCH ORDERS =================
   Future<void> fetchOrders({bool silent = false}) async {
@@ -33,7 +33,8 @@ class OrderProvider with ChangeNotifier {
     }
 
     try {
-      final response = await http.get(Uri.parse('$baseUrl/all'));
+      final response =
+          await http.get(Uri.parse('$baseUrl/admin/all'));
 
       if (response.statusCode == 200) {
         final List data = jsonDecode(response.body);
@@ -52,7 +53,6 @@ class OrderProvider with ChangeNotifier {
   }
 
   // ================= AUTO REFRESH =================
-  /// 🔁 Call this ONCE (initState)
   void startAutoRefresh() {
     _autoRefreshTimer?.cancel();
     _autoRefreshTimer = Timer.periodic(
@@ -61,20 +61,18 @@ class OrderProvider with ChangeNotifier {
     );
   }
 
-  /// 🛑 Call this on dispose
   void stopAutoRefresh() {
     _autoRefreshTimer?.cancel();
   }
 
   // ================= ACCEPT ORDER =================
-  /// API: PUT /api/orders/admin/accept/:id
   Future<void> acceptOrder(String orderId) async {
     _errorMessage = null;
     notifyListeners();
 
     try {
       final response = await http.put(
-        Uri.parse('$baseUrl/accept/$orderId'),
+        Uri.parse('$baseUrl/admin/accept/$orderId'),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -92,7 +90,6 @@ class OrderProvider with ChangeNotifier {
   }
 
   // ================= ASSIGN DELIVERY BOY =================
-  /// API: PUT /api/orders/admin/assign/:id
   Future<void> assignDeliveryBoy(
     String orderId,
     String deliveryBoyId,
@@ -102,7 +99,7 @@ class OrderProvider with ChangeNotifier {
 
     try {
       final response = await http.put(
-        Uri.parse('$baseUrl/assign/$orderId'),
+        Uri.parse('$baseUrl/admin/assign/$orderId'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'deliveryBoyId': deliveryBoyId}),
       );
