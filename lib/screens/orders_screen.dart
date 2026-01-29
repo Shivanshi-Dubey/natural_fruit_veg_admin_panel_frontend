@@ -27,7 +27,7 @@ class OrdersScreen extends StatelessWidget {
 
     return AdminLayout(
       title: showOnlyPaid ? 'Paid Orders' : 'Orders',
-      showBack: true, // 👈 SECONDARY SCREEN
+      showBack: true,
       child: orderProvider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : orders.isEmpty
@@ -45,8 +45,8 @@ class OrdersScreen extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                              color: const Color(0xFFE5E7EB)),
+                          border:
+                              Border.all(color: const Color(0xFFE5E7EB)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,7 +63,7 @@ class OrdersScreen extends StatelessWidget {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                _StatusChip(order.status),
+                                _StatusChip(order.orderStatus),
                               ],
                             ),
 
@@ -88,8 +88,8 @@ class OrdersScreen extends StatelessWidget {
                             /// ITEMS
                             const Text(
                               'Items',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w600),
+                              style:
+                                  TextStyle(fontWeight: FontWeight.w600),
                             ),
                             const SizedBox(height: 6),
                             ...order.items.map(
@@ -111,21 +111,41 @@ class OrdersScreen extends StatelessWidget {
                               ),
                             ),
 
-                            /// ACTION
-                            if (order.deliveryBoyName == null &&
-                                (order.status == 'placed' ||
-                                    order.status == 'accepted')) ...[
-                              const SizedBox(height: 12),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: OutlinedButton(
-                                  onPressed: () =>
-                                      _showAssignDialog(context, order.id),
-                                  child:
-                                      const Text('Assign Delivery Boy'),
-                                ),
-                              ),
-                            ],
+                            const SizedBox(height: 12),
+
+                            /// ACTIONS
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                /// ACCEPT ORDER
+                                if (order.orderStatus == 'placed')
+                                  ElevatedButton(
+                                    onPressed: () async {
+                                      await context
+                                          .read<OrderProvider>()
+                                          .acceptOrder(order.id);
+                                      await context
+                                          .read<OrderProvider>()
+                                          .fetchOrders();
+                                    },
+                                    child: const Text('Accept Order'),
+                                  ),
+
+                                /// ASSIGN DELIVERY BOY
+                                if (order.orderStatus == 'accepted' &&
+                                    order.deliveryBoyName == null) ...[
+                                  const SizedBox(width: 12),
+                                  OutlinedButton(
+                                    onPressed: () => _showAssignDialog(
+                                      context,
+                                      order.id,
+                                    ),
+                                    child:
+                                        const Text('Assign Delivery Boy'),
+                                  ),
+                                ],
+                              ],
+                            ),
                           ],
                         ),
                       );
@@ -175,7 +195,9 @@ class OrdersScreen extends StatelessWidget {
                       ? null
                       : () async {
                           await provider.assignDeliveryBoy(
-                              orderId, selected!.id);
+                            orderId,
+                            selected!.id,
+                          );
                           await provider.fetchOrders();
                           if (context.mounted) Navigator.pop(context);
                         },
@@ -217,6 +239,7 @@ class _StatusChip extends StatelessWidget {
       case 'placed':
         color = Colors.grey;
         break;
+      case 'accepted':
       case 'assigned':
       case 'out_for_delivery':
         color = Colors.orange;
