@@ -25,7 +25,10 @@ class Order {
   final List<OrderItem> items;
   final double deliveryCharge;
   final String orderStatus;
-  final String paymentStatus;
+ /// 💳 PAYMENT INFO
+  final String paymentMode;              // cod | upi
+  final String paymentStatus;            // pending | paid | collected | completed
+  final bool cashDepositedToAdmin; 
   final DateTime createdAt;
   final String? deliveryBoyName;
   final String? deliveryBoyId;
@@ -36,7 +39,9 @@ class Order {
     required this.items,
     required this.deliveryCharge,
     required this.orderStatus,
+    required this.paymentMode,
     required this.paymentStatus,
+    required this.cashDepositedToAdmin,
     required this.createdAt,
     this.deliveryBoyName,
     this.deliveryBoyId,
@@ -71,20 +76,28 @@ class Order {
 
     final createdAtRaw = json['createdAt'];
 
-    return Order(
+ return Order(
       id: (json['_id'] ?? '').toString(),
       customerName: resolvedCustomerName,
       items: productsJson.map((e) => OrderItem.fromJson(e)).toList(),
       deliveryCharge: (json['deliveryCharge'] ?? 0).toDouble(),
       orderStatus: (json['orderStatus'] ?? 'placed') as String,
+
+      /// 💳 NEW FIELDS
+      paymentMode: (json['paymentMode'] ?? 'cod') as String,
       paymentStatus: (json['paymentStatus'] ?? 'pending') as String,
+      cashDepositedToAdmin:
+          (json['cashDepositedToAdmin'] ?? false) as bool,
+
       createdAt: createdAtRaw != null
           ? DateTime.parse(createdAtRaw as String)
           : DateTime.now(),
+
       deliveryBoyName: resolvedDeliveryBoyName,
       deliveryBoyId: resolvedDeliveryBoyId,
     );
   }
+
 
   /// Backwards compatible: total of items (without delivery charge)
   double get itemsTotal =>

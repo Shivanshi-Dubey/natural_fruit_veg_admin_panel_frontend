@@ -2,19 +2,80 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 import '../layouts/admin_layout.dart';
 import '../models/order_model.dart';
 import '../models/delivery_boy.dart';
 import '../providers/order_provider.dart';
 
-class OrdersScreen extends StatelessWidget {
+class OrdersScreen extends StatefulWidget {
   final bool showOnlyPaid;
 
   const OrdersScreen({
     super.key,
     this.showOnlyPaid = false,
   });
+
+  @override
+  State<OrdersScreen> createState() => _OrdersScreenState();
+}
+
+class _OrdersScreenState extends State<OrdersScreen> {
+  late IO.Socket socket;
+
+  @override
+  void initState() {
+    super.initState();
+
+    /// 🔌 CONNECT SOCKET
+    socket = IO.io(
+      'https://naturalfruitveg.com',
+      IO.OptionBuilder()
+          .setTransports(['websocket'])
+          .enableAutoConnect()
+          .build(),
+    );
+
+    socket.onConnect((_) {
+      print("🟢 Admin connected to socket");
+    });
+
+    socket.on('newOrder', (data) {
+      print("🆕 New order received");
+
+      _showNewOrderPopup();
+
+      /// refresh orders automatically
+      context.read<OrderProvider>().fetchOrders();
+    });
+  }
+
+  @override
+  void dispose() {
+    socket.dispose();
+    super.dispose();
+  }
+
+  void _showNewOrderPopup() {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("🆕 New Order"),
+        content: const Text("A new order has been placed."),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text("View Orders"),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,9 +138,11 @@ class OrdersScreen extends StatelessWidget {
                               'Payment: ${order.paymentStatus.toUpperCase()}',
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
-                                color: order.paymentStatus == 'paid'
-                                    ? Colors.green
-                                    : Colors.orange,
+                                color: order.paymentStatus == 'completed'
+    ? Colors.green
+    : order.paymentStatus == 'collected'
+        ? Colors.orange
+        : Colors.red,
                               ),
                             ),
 
@@ -144,6 +207,23 @@ class OrdersScreen extends StatelessWidget {
                                         const Text('Assign Delivery Boy'),
                                   ),
                                 ],
+
+                                /// CONFIRM COD DEPOSIT
+if (order.paymentMode == 'cod' &&
+    order.paymentStatus == 'collected' &&
+    order.cashDepositedToAdmin == false) ...[
+  const SizedBox(width: 12),
+  ElevatedButton(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: Colors.blue,
+    ),
+    onPressed: () async {
+      await _confirmDeposit(order.id);
+      await context.read<OrderProvider>().fetchOrders();
+    },
+    child: const Text('Confirm Deposit'),
+  ),
+],
                               ],
                             ),
                           ],
@@ -225,6 +305,23 @@ class OrdersScreen extends StatelessWidget {
     }
     return [];
   }
+
+  Future<void> _confirmDeposit(String orderId) async {
+  final res = await http.put(
+    Uri.parse(
+      'https://naturalfruitveg.com/api/orders/admin/confirm-deposit/$orderId',
+    ),
+  );
+
+  if (res.statusCode == 200 && mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Cash deposit confirmed'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+}
 }
 
 /// ================= STATUS CHIP =================
