@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 import '../layouts/admin_layout.dart';
 import '../models/order_model.dart';
@@ -24,11 +26,13 @@ class OrdersScreen extends StatefulWidget {
 class _OrdersScreenState extends State<OrdersScreen> {
   late IO.Socket socket;
 
+  String searchQuery = "";
+  String dateFilter = "all"; // all | today | week
+
   @override
   void initState() {
     super.initState();
 
-    /// 🔌 CONNECT SOCKET
     socket = IO.io(
       'https://naturalfruitveg.com',
       IO.OptionBuilder()
@@ -37,17 +41,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
           .build(),
     );
 
-    socket.onConnect((_) {
-      print("🟢 Admin connected to socket");
-    });
-
-    socket.on('newOrder', (data) {
-      print("🆕 New order received");
-
-      _showNewOrderPopup();
-
-      /// refresh orders automatically
+    socket.on('newOrder', (_) {
       context.read<OrderProvider>().fetchOrders();
+      _showNewOrderPopup();
     });
   }
 
@@ -62,269 +58,349 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("🆕 New Order"),
-        content: const Text("A new order has been placed."),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text("View Orders"),
+      builder: (_) => const AlertDialog(
+        title: Text("🆕 New Order"),
+        content: Text("A new order has been placed."),
+      ),
+    );
+  }
+
+  /// ================= FILTERS =================
+
+  List<Order> _applyFilters(List<Order> orders) {
+    List<Order> filtered = orders;
+
+    if (searchQuery.isNotEmpty) {
+      filtered = filtered.where((o) =>
+          o.customerName
+              .toLowerCase()
+              .contains(searchQuery.toLowerCase()) ||
+          o.id.contains(searchQuery)).toList();
+    }
+
+    if (dateFilter == "today") {
+      final today = DateTime.now();
+      filtered = filtered.where((o) =>
+          o.createdAt.year == today.year &&
+          o.createdAt.month == today.month &&
+          o.createdAt.day == today.day).toList();
+    }
+
+    if (dateFilter == "week") {
+      final weekAgo =
+          DateTime.now().subtract(const Duration(days: 7));
+      filtered =
+          filtered.where((o) => o.createdAt.isAfter(weekAgo)).toList();
+    }
+
+    return filtered;
+  }
+
+  Map<String, dynamic> _calculateStats(List<Order> orders) {
+    double totalRevenue = 0;
+    double codPending = 0;
+    double upiRevenue = 0;
+
+    for (var o in orders) {
+      totalRevenue += o.totalPrice;
+
+      if (o.paymentMethod == 'cod' &&
+          o.paymentStatus == 'pending') {
+        codPending += o.totalPrice;
+      }
+
+      if (o.paymentMethod == 'upi' &&
+          o.paymentStatus == 'paid') {
+        upiRevenue += o.totalPrice;
+      }
+    }
+
+    return {
+      "totalOrders": orders.length,
+      "totalRevenue": totalRevenue,
+      "codPending": codPending,
+      "upiRevenue": upiRevenue,
+    };
+  }
+
+  Color _getPaymentColor(Order order) {
+    if (order.paymentMethod == 'cod' &&
+        order.paymentStatus == 'pending') {
+      return Colors.red;
+    }
+
+    if (order.paymentMethod == 'cod' &&
+        order.paymentStatus == 'collected') {
+      return Colors.orange;
+    }
+
+    if (order.paymentMethod == 'upi' &&
+        order.paymentStatus == 'paid') {
+      return Colors.green;
+    }
+
+    if (order.paymentStatus == 'completed') {
+      return Colors.green;
+    }
+
+    return Colors.grey;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<OrderProvider>();
+    List<Order> orders = _applyFilters(provider.orders);
+    final stats = _calculateStats(orders);
+
+    if (widget.showOnlyPaid) {
+      orders =
+          orders.where((o) => o.paymentStatus == 'paid').toList();
+    }
+
+    return AdminLayout(
+      title: 'Orders',
+      showBack: true,
+      child: provider.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(24),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  children: [
+
+                    /// SEARCH
+                    TextField(
+                      decoration: const InputDecoration(
+                        hintText:
+                            "Search by customer or order ID",
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          searchQuery = value;
+                        });
+                      },
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    /// DATE FILTER
+                    Row(
+                      children: [
+                        _dateButton("All", "all"),
+                        const SizedBox(width: 10),
+                        _dateButton("Today", "today"),
+                        const SizedBox(width: 10),
+                        _dateButton("Last 7 Days", "week"),
+                      ],
+                    ),
+
+                    const SizedBox(height: 25),
+
+                    /// DASHBOARD STATS
+                    Wrap(
+                      spacing: 16,
+                      runSpacing: 16,
+                      children: [
+                        _statCard("Total Orders",
+                            stats["totalOrders"].toString(),
+                            Colors.blue),
+                        _statCard(
+                            "Total Revenue",
+                            "₹${stats["totalRevenue"].toStringAsFixed(0)}",
+                            Colors.green),
+                        _statCard(
+                            "COD Pending",
+                            "₹${stats["codPending"].toStringAsFixed(0)}",
+                            Colors.red),
+                        _statCard(
+                            "UPI Revenue",
+                            "₹${stats["upiRevenue"].toStringAsFixed(0)}",
+                            Colors.orange),
+                      ],
+                    ),
+
+                    const SizedBox(height: 30),
+
+                    /// ORDERS LIST
+                    if (orders.isEmpty)
+                      const Center(
+                          child: Text("No orders found"))
+                    else
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics:
+                            const NeverScrollableScrollPhysics(),
+                        itemCount: orders.length,
+                        itemBuilder: (context, index) {
+                          final order = orders[index];
+
+                          return _buildOrderCard(order);
+                        },
+                      ),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+
+  /// ================= ORDER CARD =================
+
+  Widget _buildOrderCard(Order order) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: order.paymentMethod == 'cod' &&
+                order.paymentStatus == 'pending'
+            ? Colors.red.withOpacity(0.05)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+
+          /// HEADER
+          Row(
+            mainAxisAlignment:
+                MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Order #${order.id.substring(order.id.length - 6)}',
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold),
+              ),
+              _StatusChip(order.orderStatus),
+            ],
+          ),
+
+          const SizedBox(height: 10),
+
+          Text("Customer: ${order.customerName}"),
+          Text(
+            "Total: ₹${order.totalPrice.toStringAsFixed(0)}",
+            style:
+                const TextStyle(fontWeight: FontWeight.w600),
+          ),
+
+          const Divider(height: 24),
+
+          ...order.items.map((i) => Row(
+                mainAxisAlignment:
+                    MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                      child:
+                          Text("${i.name} × ${i.quantity}")),
+                  Text(
+                      "₹${(i.price * i.quantity).toStringAsFixed(0)}"),
+                ],
+              )),
+
+          const SizedBox(height: 16),
+
+          Wrap(
+            spacing: 10,
+            children: [
+              OutlinedButton.icon(
+                icon: const Icon(Icons.print),
+                label: const Text("Print"),
+                onPressed: () => _printOrder(order),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final orderProvider = context.watch<OrderProvider>();
-    List<Order> orders = orderProvider.orders;
+  /// ================= PRINT =================
 
-    if (showOnlyPaid) {
-      orders = orders.where((o) => o.paymentStatus == 'paid').toList();
-    }
+  Future<void> _printOrder(Order order) async {
+    final pdf = pw.Document();
 
-    return AdminLayout(
-      title: showOnlyPaid ? 'Paid Orders' : 'Orders',
-      showBack: true,
-      child: orderProvider.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : orders.isEmpty
-              ? const Center(child: Text('No orders found'))
-              : Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: ListView.builder(
-                    itemCount: orders.length,
-                    itemBuilder: (context, index) {
-                      final order = orders[index];
+    pdf.addPage(
+      pw.Page(
+        build: (_) => pw.Column(
+          crossAxisAlignment:
+              pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text("Natural Fruit & Veg",
+                style: pw.TextStyle(
+                    fontSize: 20,
+                    fontWeight:
+                        pw.FontWeight.bold)),
+            pw.SizedBox(height: 10),
+            pw.Text("Order ID: ${order.id}"),
+            pw.Text("Customer: ${order.customerName}"),
+            pw.SizedBox(height: 10),
+            ...order.items.map((i) =>
+                pw.Text("${i.name} x${i.quantity}")),
+            pw.Divider(),
+            pw.Text(
+                "Total: ₹${order.totalPrice.toStringAsFixed(0)}"),
+          ],
+        ),
+      ),
+    );
 
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border:
-                              Border.all(color: const Color(0xFFE5E7EB)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            /// HEADER
-                            Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Order #${order.id.substring(order.id.length - 6)}',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                _StatusChip(order.orderStatus),
-                              ],
-                            ),
+    await Printing.layoutPdf(
+        onLayout: (format) async => pdf.save());
+  }
 
-                            const SizedBox(height: 8),
+  /// ================= SMALL WIDGETS =================
 
-                            /// PRICE + PAYMENT
-                            Text(
-                              'Total: ₹${order.totalPrice.toStringAsFixed(0)}',
-                            ),
-                            Text(
-                              'Payment: ${order.paymentStatus.toUpperCase()}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: order.paymentStatus == 'completed'
-    ? Colors.green
-    : order.paymentStatus == 'collected'
-        ? Colors.orange
-        : Colors.red,
-                              ),
-                            ),
-
-                            const Divider(height: 24),
-
-                            /// ITEMS
-                            const Text(
-                              'Items',
-                              style:
-                                  TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            const SizedBox(height: 6),
-                            ...order.items.map(
-                              (i) => Text('• ${i.name} × ${i.quantity}'),
-                            ),
-
-                            const SizedBox(height: 12),
-
-                            /// DELIVERY
-                            Text(
-                              order.deliveryBoyName != null
-                                  ? 'Delivery Boy: ${order.deliveryBoyName}'
-                                  : 'Delivery Boy: Not assigned',
-                              style: TextStyle(
-                                color: order.deliveryBoyName != null
-                                    ? Colors.green
-                                    : Colors.red,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-
-                            const SizedBox(height: 12),
-
-                            /// ACTIONS
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                /// ACCEPT ORDER
-                                if (order.orderStatus == 'placed')
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      await context
-                                          .read<OrderProvider>()
-                                          .acceptOrder(order.id);
-                                      await context
-                                          .read<OrderProvider>()
-                                          .fetchOrders();
-                                    },
-                                    child: const Text('Accept Order'),
-                                  ),
-
-                                /// ASSIGN DELIVERY BOY
-                                if (order.orderStatus == 'accepted' &&
-                                    order.deliveryBoyName == null) ...[
-                                  const SizedBox(width: 12),
-                                  OutlinedButton(
-                                    onPressed: () => _showAssignDialog(
-                                      context,
-                                      order.id,
-                                    ),
-                                    child:
-                                        const Text('Assign Delivery Boy'),
-                                  ),
-                                ],
-
-                                /// CONFIRM COD DEPOSIT
-if (order.paymentMode == 'cod' &&
-    order.paymentStatus == 'collected' &&
-    order.cashDepositedToAdmin == false) ...[
-  const SizedBox(width: 12),
-  ElevatedButton(
-    style: ElevatedButton.styleFrom(
-      backgroundColor: Colors.blue,
-    ),
-    onPressed: () async {
-      await _confirmDeposit(order.id);
-      await context.read<OrderProvider>().fetchOrders();
-    },
-    child: const Text('Confirm Deposit'),
-  ),
-],
-                              ],
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
+  Widget _statCard(String title, String value, Color color) {
+    return Container(
+      width: 220,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
+        children: [
+          Text(title),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: color),
+          ),
+        ],
+      ),
     );
   }
 
-  /// ================= ASSIGN DIALOG =================
-  Future<void> _showAssignDialog(
-    BuildContext context,
-    String orderId,
-  ) async {
-    final provider = context.read<OrderProvider>();
-    final boys = await _fetchDeliveryBoys();
-    DeliveryBoy? selected;
+  Widget _dateButton(String text, String value) {
+    final selected = dateFilter == value;
 
-    if (!context.mounted) return;
-
-    await showDialog(
-      context: context,
-      builder: (_) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Assign Delivery Boy'),
-              content: DropdownButton<DeliveryBoy>(
-                isExpanded: true,
-                value: selected,
-                hint: const Text('Select delivery boy'),
-                items: boys.map((b) {
-                  return DropdownMenuItem(
-                    value: b,
-                    child: Text('${b.name} (${b.phone})'),
-                  );
-                }).toList(),
-                onChanged: (v) => setState(() => selected = v),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: selected == null
-                      ? null
-                      : () async {
-                          await provider.assignDeliveryBoy(
-                            orderId,
-                            selected!.id,
-                          );
-                          await provider.fetchOrders();
-                          if (context.mounted) Navigator.pop(context);
-                        },
-                  child: const Text('Assign'),
-                ),
-              ],
-            );
-          },
-        );
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor:
+            selected ? Colors.black : Colors.grey[300],
+        foregroundColor:
+            selected ? Colors.white : Colors.black,
+      ),
+      onPressed: () {
+        setState(() {
+          dateFilter = value;
+        });
       },
-    );
-  }
-
-  /// ================= FETCH DELIVERY BOYS =================
-  Future<List<DeliveryBoy>> _fetchDeliveryBoys() async {
-    final res = await http.get(
-      Uri.parse(
-        'https://naturalfruitveg.com/api/delivery-boys?onlyAvailable=true',
-      ),
-    );
-
-    if (res.statusCode == 200) {
-      final List data = jsonDecode(res.body);
-      return data.map((e) => DeliveryBoy.fromJson(e)).toList();
-    }
-    return [];
-  }
-
-  Future<void> _confirmDeposit(String orderId) async {
-  final res = await http.put(
-    Uri.parse(
-      'https://naturalfruitveg.com/api/orders/admin/confirm-deposit/$orderId',
-    ),
-  );
-
-  if (res.statusCode == 200 && mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Cash deposit confirmed'),
-        backgroundColor: Colors.green,
-      ),
+      child: Text(text),
     );
   }
 }
-}
 
-/// ================= STATUS CHIP =================
 class _StatusChip extends StatelessWidget {
   final String status;
   const _StatusChip(this.status);
@@ -333,16 +409,12 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     Color color;
     switch (status) {
-      case 'placed':
-        color = Colors.grey;
-        break;
-      case 'accepted':
-      case 'assigned':
-      case 'out_for_delivery':
-        color = Colors.orange;
-        break;
       case 'delivered':
         color = Colors.green;
+        break;
+      case 'out_for_delivery':
+      case 'accepted':
+        color = Colors.orange;
         break;
       default:
         color = Colors.grey;
@@ -350,20 +422,19 @@ class _StatusChip extends StatelessWidget {
 
     return Container(
       padding:
-          const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         status.toUpperCase(),
         style: TextStyle(
           fontSize: 12,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.bold,
           color: color,
         ),
       ),
     );
   }
 }
-
