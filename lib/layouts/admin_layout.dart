@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../screens/dashboard_screen.dart';
 import '../screens/manage_products_screen.dart';
-import '../screens/manage_orders_screen.dart';
+import '../screens/orders_screen.dart';
 import '../screens/add_product_screen.dart';
 import '../screens/customers_screen.dart';
 import '../screens/reports_screen.dart';
@@ -98,7 +98,7 @@ class AdminLayout extends StatelessWidget {
                     _subMenuItem(
                       context,
                       'All Orders',
-                      const ManageOrdersScreen(),
+                      const OrdersScreen(),
                     ),
                   ],
                 ),

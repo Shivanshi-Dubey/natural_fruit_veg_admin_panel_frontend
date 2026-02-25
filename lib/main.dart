@@ -59,7 +59,7 @@ class AdminApp extends StatelessWidget {
               '/dashboard': (context) => const DashboardScreen(),
               '/manage-products': (context) =>
                   const ManageProductsScreen(),
-              '/OrdersScreen': (context) =>
+              '/orders': (context) =>
                   const OrdersScreen(),
               '/add-product': (context) =>
                   const AddProductScreen(),
