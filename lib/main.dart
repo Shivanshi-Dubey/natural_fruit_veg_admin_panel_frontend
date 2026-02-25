@@ -13,7 +13,7 @@ import 'providers/expense_provider.dart';
 
 // Screens
 import 'screens/manage_products_screen.dart';
-import 'screens/manage_orders_screen.dart';
+import 'screens/orders_screen.dart';
 import 'screens/add_product_screen.dart';
 import 'screens/dashboard_screen.dart';
 
@@ -59,8 +59,8 @@ class AdminApp extends StatelessWidget {
               '/dashboard': (context) => const DashboardScreen(),
               '/manage-products': (context) =>
                   const ManageProductsScreen(),
-              '/manage-orders': (context) =>
-                  const ManageOrdersScreen(),
+              '/OrdersScreen': (context) =>
+                  const OrdersScreen(),
               '/add-product': (context) =>
                   const AddProductScreen(),
             },

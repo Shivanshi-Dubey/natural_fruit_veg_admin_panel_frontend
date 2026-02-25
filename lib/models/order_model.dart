@@ -26,7 +26,7 @@ class Order {
   final double deliveryCharge;
   final String orderStatus;
  /// 💳 PAYMENT INFO
-  final String paymentMode;              // cod | upi
+  final String paymentMethod;              // cod | upi
   final String paymentStatus;            // pending | paid | collected | completed
   final bool cashDepositedToAdmin; 
   final DateTime createdAt;
@@ -39,7 +39,7 @@ class Order {
     required this.items,
     required this.deliveryCharge,
     required this.orderStatus,
-    required this.paymentMode,
+    required this.paymentMethod,
     required this.paymentStatus,
     required this.cashDepositedToAdmin,
     required this.createdAt,
@@ -84,7 +84,7 @@ class Order {
       orderStatus: (json['orderStatus'] ?? 'placed') as String,
 
       /// 💳 NEW FIELDS
-      paymentMode: (json['paymentMode'] ?? 'cod') as String,
+      paymentMethod: (json['paymentMethod'] ?? 'cod') as String,
       paymentStatus: (json['paymentStatus'] ?? 'pending') as String,
       cashDepositedToAdmin:
           (json['cashDepositedToAdmin'] ?? false) as bool,
