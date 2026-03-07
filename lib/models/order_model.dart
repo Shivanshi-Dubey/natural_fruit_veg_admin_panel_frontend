@@ -25,10 +25,15 @@ class Order {
   final List<OrderItem> items;
   final double deliveryCharge;
   final String orderStatus;
- /// 💳 PAYMENT INFO
-  final String paymentMethod;              // cod | upi
-  final String paymentStatus;            // pending | paid | collected | completed
-  final bool cashDepositedToAdmin; 
+
+  /// ✅ RETURN STATUS
+  final String returnStatus; // none | requested | approved | rejected
+
+  /// 💳 PAYMENT INFO
+  final String paymentMethod; // cod | upi
+  final String paymentStatus; // pending | paid | collected | completed
+  final bool cashDepositedToAdmin;
+
   final DateTime createdAt;
   final String? deliveryBoyName;
   final String? deliveryBoyId;
@@ -39,6 +44,7 @@ class Order {
     required this.items,
     required this.deliveryCharge,
     required this.orderStatus,
+    required this.returnStatus, // ✅ ADDED HERE
     required this.paymentMethod,
     required this.paymentStatus,
     required this.cashDepositedToAdmin,
@@ -47,8 +53,8 @@ class Order {
     this.deliveryBoyId,
   });
 
- String get status => orderStatus;
- 
+  String get status => orderStatus;
+
   factory Order.fromJson(Map<String, dynamic> json) {
     final user = json['user'];
     final deliveryBoy = json['deliveryBoy'];
@@ -65,6 +71,7 @@ class Order {
 
     final String? resolvedDeliveryBoyName;
     final String? resolvedDeliveryBoyId;
+
     if (deliveryBoy is Map) {
       resolvedDeliveryBoyName = deliveryBoy['name'] as String?;
       resolvedDeliveryBoyId =
@@ -76,18 +83,29 @@ class Order {
 
     final createdAtRaw = json['createdAt'];
 
- return Order(
+    return Order(
       id: (json['_id'] ?? '').toString(),
       customerName: resolvedCustomerName,
-      items: productsJson.map((e) => OrderItem.fromJson(e)).toList(),
-      deliveryCharge: (json['deliveryCharge'] ?? 0).toDouble(),
-      orderStatus: (json['orderStatus'] ?? 'placed') as String,
+      items: productsJson
+          .map((e) => OrderItem.fromJson(e))
+          .toList(),
+      deliveryCharge:
+          (json['deliveryCharge'] ?? 0).toDouble(),
+      orderStatus:
+          (json['orderStatus'] ?? 'placed') as String,
 
-      /// 💳 NEW FIELDS
-      paymentMethod: (json['paymentMethod'] ?? 'cod') as String,
-      paymentStatus: (json['paymentStatus'] ?? 'pending') as String,
+      /// ✅ RETURN STATUS FIXED
+      returnStatus:
+          (json['returnStatus'] ?? 'none') as String,
+
+      /// 💳 PAYMENT INFO
+      paymentMethod:
+          (json['paymentMethod'] ?? 'cod') as String,
+      paymentStatus:
+          (json['paymentStatus'] ?? 'pending') as String,
       cashDepositedToAdmin:
-          (json['cashDepositedToAdmin'] ?? false) as bool,
+          (json['cashDepositedToAdmin'] ?? false)
+              as bool,
 
       createdAt: createdAtRaw != null
           ? DateTime.parse(createdAtRaw as String)
@@ -98,12 +116,11 @@ class Order {
     );
   }
 
-
-  /// Backwards compatible: total of items (without delivery charge)
+  /// Total without delivery
   double get itemsTotal =>
       items.fold(0, (sum, i) => sum + (i.price * i.quantity));
 
-  /// Total including delivery charge (used by dashboard)
-  double get totalPrice => itemsTotal + deliveryCharge;
+  /// Total including delivery
+  double get totalPrice =>
+      itemsTotal + deliveryCharge;
 }
-

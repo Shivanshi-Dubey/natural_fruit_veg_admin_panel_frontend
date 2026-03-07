@@ -27,7 +27,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   late IO.Socket socket;
 
   String searchQuery = "";
-  String dateFilter = "all"; // all | today | week
+  String dateFilter = "all";
 
   @override
   void initState() {
@@ -72,9 +72,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
     if (searchQuery.isNotEmpty) {
       filtered = filtered.where((o) =>
-          o.customerName
-              .toLowerCase()
-              .contains(searchQuery.toLowerCase()) ||
+          o.customerName.toLowerCase().contains(searchQuery.toLowerCase()) ||
           o.id.contains(searchQuery)).toList();
     }
 
@@ -87,10 +85,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
     }
 
     if (dateFilter == "week") {
-      final weekAgo =
-          DateTime.now().subtract(const Duration(days: 7));
-      filtered =
-          filtered.where((o) => o.createdAt.isAfter(weekAgo)).toList();
+      final weekAgo = DateTime.now().subtract(const Duration(days: 7));
+      filtered = filtered.where((o) => o.createdAt.isAfter(weekAgo)).toList();
     }
 
     return filtered;
@@ -104,13 +100,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
     for (var o in orders) {
       totalRevenue += o.totalPrice;
 
-      if (o.paymentMethod == 'cod' &&
-          o.paymentStatus == 'pending') {
+      if (o.paymentMethod == 'cod' && o.paymentStatus == 'pending') {
         codPending += o.totalPrice;
       }
 
-      if (o.paymentMethod == 'upi' &&
-          o.paymentStatus == 'paid') {
+      if (o.paymentMethod == 'upi' && o.paymentStatus == 'paid') {
         upiRevenue += o.totalPrice;
       }
     }
@@ -123,27 +117,59 @@ class _OrdersScreenState extends State<OrdersScreen> {
     };
   }
 
-  Color _getPaymentColor(Order order) {
-    if (order.paymentMethod == 'cod' &&
-        order.paymentStatus == 'pending') {
-      return Colors.red;
-    }
+  /// ================= ASSIGN DELIVERY BOY =================
 
-    if (order.paymentMethod == 'cod' &&
-        order.paymentStatus == 'collected') {
-      return Colors.orange;
-    }
+  Future<void> _showAssignDeliveryDialog(Order order) async {
+    try {
+      final response = await http.get(
+        Uri.parse("https://naturalfruitveg.com/api/delivery-boys"),
+      );
 
-    if (order.paymentMethod == 'upi' &&
-        order.paymentStatus == 'paid') {
-      return Colors.green;
-    }
+      final data = jsonDecode(response.body);
 
-    if (order.paymentStatus == 'completed') {
-      return Colors.green;
-    }
+      List<DeliveryBoy> boys =
+          (data as List).map((e) => DeliveryBoy.fromJson(e)).toList();
 
-    return Colors.grey;
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (_) {
+          return AlertDialog(
+            title: const Text("Assign Delivery Boy"),
+            content: SizedBox(
+              width: 300,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: boys.length,
+                itemBuilder: (context, index) {
+                  final boy = boys[index];
+
+                  return ListTile(
+                    title: Text(boy.name),
+                    subtitle: Text(boy.phone),
+                    trailing: ElevatedButton(
+                      child: const Text("Assign"),
+                      onPressed: () async {
+                        await context
+                            .read<OrderProvider>()
+                            .assignDeliveryBoy(order.id, boy.id);
+
+                        Navigator.pop(context);
+
+                        await context.read<OrderProvider>().fetchOrders();
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      debugPrint(e.toString());
+    }
   }
 
   @override
@@ -151,11 +177,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
     final provider = context.watch<OrderProvider>();
     List<Order> orders = _applyFilters(provider.orders);
     final stats = _calculateStats(orders);
-
-    if (widget.showOnlyPaid) {
-      orders =
-          orders.where((o) => o.paymentStatus == 'paid').toList();
-    }
 
     return AdminLayout(
       title: 'Orders',
@@ -166,15 +187,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
               padding: const EdgeInsets.all(24),
               child: SingleChildScrollView(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
 
                     /// SEARCH
                     TextField(
                       decoration: const InputDecoration(
-                        hintText:
-                            "Search by customer or order ID",
+                        hintText: "Search by customer or order ID",
                         prefixIcon: Icon(Icons.search),
                       ),
                       onChanged: (value) {
@@ -205,8 +224,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       runSpacing: 16,
                       children: [
                         _statCard("Total Orders",
-                            stats["totalOrders"].toString(),
-                            Colors.blue),
+                            stats["totalOrders"].toString(), Colors.blue),
                         _statCard(
                             "Total Revenue",
                             "₹${stats["totalRevenue"].toStringAsFixed(0)}",
@@ -226,17 +244,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
                     /// ORDERS LIST
                     if (orders.isEmpty)
-                      const Center(
-                          child: Text("No orders found"))
+                      const Center(child: Text("No orders found"))
                     else
                       ListView.builder(
                         shrinkWrap: true,
-                        physics:
-                            const NeverScrollableScrollPhysics(),
+                        physics: const NeverScrollableScrollPhysics(),
                         itemCount: orders.length,
                         itemBuilder: (context, index) {
                           final order = orders[index];
-
                           return _buildOrderCard(order);
                         },
                       ),
@@ -254,10 +269,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: order.paymentMethod == 'cod' &&
-                order.paymentStatus == 'pending'
-            ? Colors.red.withOpacity(0.05)
-            : Colors.white,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
@@ -265,15 +277,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
 
-          /// HEADER
           Row(
-            mainAxisAlignment:
-                MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 'Order #${order.id.substring(order.id.length - 6)}',
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold),
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               _StatusChip(order.orderStatus),
             ],
@@ -284,21 +293,16 @@ class _OrdersScreenState extends State<OrdersScreen> {
           Text("Customer: ${order.customerName}"),
           Text(
             "Total: ₹${order.totalPrice.toStringAsFixed(0)}",
-            style:
-                const TextStyle(fontWeight: FontWeight.w600),
+            style: const TextStyle(fontWeight: FontWeight.w600),
           ),
 
           const Divider(height: 24),
 
           ...order.items.map((i) => Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                      child:
-                          Text("${i.name} × ${i.quantity}")),
-                  Text(
-                      "₹${(i.price * i.quantity).toStringAsFixed(0)}"),
+                  Expanded(child: Text("${i.name} × ${i.quantity}")),
+                  Text("₹${(i.price * i.quantity).toStringAsFixed(0)}"),
                 ],
               )),
 
@@ -306,12 +310,43 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
           Wrap(
             spacing: 10,
+            runSpacing: 10,
             children: [
+
+              /// PRINT
               OutlinedButton.icon(
                 icon: const Icon(Icons.print),
                 label: const Text("Print"),
                 onPressed: () => _printOrder(order),
               ),
+
+              /// ACCEPT ORDER
+              if (order.orderStatus == 'placed')
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                  ),
+                  onPressed: () async {
+                    await context
+                        .read<OrderProvider>()
+                        .updateOrderStatus(order.id, 'accepted');
+
+                    await context.read<OrderProvider>().fetchOrders();
+                  },
+                  child: const Text("Accept Order"),
+                ),
+
+              /// ASSIGN DELIVERY
+              if (order.orderStatus == 'accepted')
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                  ),
+                  onPressed: () {
+                    _showAssignDeliveryDialog(order);
+                  },
+                  child: const Text("Assign Delivery"),
+                ),
             ],
           ),
         ],
@@ -327,33 +362,25 @@ class _OrdersScreenState extends State<OrdersScreen> {
     pdf.addPage(
       pw.Page(
         build: (_) => pw.Column(
-          crossAxisAlignment:
-              pw.CrossAxisAlignment.start,
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.Text("Natural Fruit & Veg",
                 style: pw.TextStyle(
-                    fontSize: 20,
-                    fontWeight:
-                        pw.FontWeight.bold)),
+                    fontSize: 20, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 10),
             pw.Text("Order ID: ${order.id}"),
             pw.Text("Customer: ${order.customerName}"),
             pw.SizedBox(height: 10),
-            ...order.items.map((i) =>
-                pw.Text("${i.name} x${i.quantity}")),
+            ...order.items.map((i) => pw.Text("${i.name} x${i.quantity}")),
             pw.Divider(),
-            pw.Text(
-                "Total: ₹${order.totalPrice.toStringAsFixed(0)}"),
+            pw.Text("Total: ₹${order.totalPrice.toStringAsFixed(0)}"),
           ],
         ),
       ),
     );
 
-    await Printing.layoutPdf(
-        onLayout: (format) async => pdf.save());
+    await Printing.layoutPdf(onLayout: (format) async => pdf.save());
   }
-
-  /// ================= SMALL WIDGETS =================
 
   Widget _statCard(String title, String value, Color color) {
     return Container(
@@ -364,17 +391,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title),
           const SizedBox(height: 6),
           Text(
             value,
             style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: color),
+                fontSize: 18, fontWeight: FontWeight.bold, color: color),
           ),
         ],
       ),
@@ -386,10 +410,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
-        backgroundColor:
-            selected ? Colors.black : Colors.grey[300],
-        foregroundColor:
-            selected ? Colors.white : Colors.black,
+        backgroundColor: selected ? Colors.black : Colors.grey[300],
+        foregroundColor: selected ? Colors.white : Colors.black,
       ),
       onPressed: () {
         setState(() {
@@ -421,8 +443,7 @@ class _StatusChip extends StatelessWidget {
     }
 
     return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.12),
         borderRadius: BorderRadius.circular(6),

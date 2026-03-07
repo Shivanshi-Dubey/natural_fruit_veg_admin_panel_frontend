@@ -6,26 +6,27 @@ import 'package:http/http.dart' as http;
 import '../models/order_model.dart';
 
 class OrderProvider with ChangeNotifier {
-  // ================= STATE =================
+
+  /// ================= STATE =================
   List<Order> _orders = [];
   bool _isLoading = false;
   String? _errorMessage;
 
   Timer? _autoRefreshTimer;
 
-  // ================= GETTERS =================
+  /// ================= GETTERS =================
   List<Order> get orders => _orders;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  /// 🔴 COUNT OF NEW (PLACED) ORDERS
+  /// COUNT OF NEW ORDERS
   int get newOrdersCount =>
       _orders.where((o) => o.orderStatus == 'placed').length;
 
-  // ================= BASE URL =================
-  final String baseUrl = 'https://naturalfruitveg.com/api/orders';
+  /// ================= BASE URL =================
+  final String baseUrl = "https://naturalfruitveg.com/api/orders";
 
-  // ================= FETCH ORDERS =================
+  /// ================= FETCH ORDERS =================
   Future<void> fetchOrders({bool silent = false}) async {
     if (!silent) {
       _isLoading = true;
@@ -34,27 +35,29 @@ class OrderProvider with ChangeNotifier {
 
     try {
       final response =
-          await http.get(Uri.parse('$baseUrl/admin/all'));
+          await http.get(Uri.parse("$baseUrl/admin/all"));
 
       if (response.statusCode == 200) {
         final List data = jsonDecode(response.body);
+
         _orders = data.map((e) => Order.fromJson(e)).toList();
         _errorMessage = null;
       } else {
         _errorMessage =
-            'Failed to load orders (${response.statusCode})';
+            "Failed to load orders (${response.statusCode})";
       }
     } catch (e) {
-      _errorMessage = 'Error fetching orders: $e';
+      _errorMessage = "Error fetching orders: $e";
     }
 
     _isLoading = false;
     notifyListeners();
   }
 
-  // ================= AUTO REFRESH =================
+  /// ================= AUTO REFRESH =================
   void startAutoRefresh() {
     _autoRefreshTimer?.cancel();
+
     _autoRefreshTimer = Timer.periodic(
       const Duration(seconds: 10),
       (_) => fetchOrders(silent: true),
@@ -65,65 +68,98 @@ class OrderProvider with ChangeNotifier {
     _autoRefreshTimer?.cancel();
   }
 
-  // ================= ACCEPT ORDER =================
+  /// ================= ACCEPT ORDER =================
   Future<void> acceptOrder(String orderId) async {
-    _errorMessage = null;
-    notifyListeners();
-
     try {
       final response = await http.put(
-        Uri.parse('$baseUrl/admin/accept/$orderId'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse("$baseUrl/admin/accept/$orderId"),
       );
 
       if (response.statusCode == 200) {
         await fetchOrders();
       } else {
         _errorMessage =
-            'Failed to accept order (${response.statusCode})';
+            "Failed to accept order (${response.statusCode})";
         notifyListeners();
       }
     } catch (e) {
-      _errorMessage = 'Error accepting order: $e';
+      _errorMessage = "Accept order error: $e";
       notifyListeners();
     }
   }
 
-  // ================= ASSIGN DELIVERY BOY =================
+  /// ================= UPDATE ORDER STATUS =================
+  Future<void> updateOrderStatus(
+      String orderId, String status) async {
+    try {
+      final response = await http.put(
+        Uri.parse("$baseUrl/admin/status/$orderId"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"status": status}),
+      );
+
+      if (response.statusCode == 200) {
+        await fetchOrders();
+      } else {
+        _errorMessage =
+            "Failed to update status (${response.statusCode})";
+        notifyListeners();
+      }
+    } catch (e) {
+      _errorMessage = "Status update error: $e";
+      notifyListeners();
+    }
+  }
+
+  /// ================= ASSIGN DELIVERY BOY =================
   Future<void> assignDeliveryBoy(
-    String orderId,
-    String deliveryBoyId,
-  ) async {
-    _errorMessage = null;
-    notifyListeners();
-
+      String orderId, String deliveryBoyId) async {
     try {
       final response = await http.put(
-        Uri.parse('$baseUrl/admin/assign/$orderId'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'deliveryBoyId': deliveryBoyId}),
+        Uri.parse("$baseUrl/admin/assign/$orderId"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "deliveryBoyId": deliveryBoyId
+        }),
       );
 
       if (response.statusCode == 200) {
         await fetchOrders();
       } else {
         _errorMessage =
-            'Failed to assign delivery boy (${response.statusCode})';
+            "Failed to assign delivery (${response.statusCode})";
         notifyListeners();
       }
     } catch (e) {
-      _errorMessage = 'Error assigning delivery boy: $e';
+      _errorMessage = "Assign delivery error: $e";
       notifyListeners();
     }
   }
 
-  // ================= CLEAR ERROR =================
+  /// ================= UPDATE RETURN STATUS =================
+  Future<void> updateReturnStatus(
+      String orderId, String status) async {
+    try {
+      await http.put(
+        Uri.parse(
+            "https://naturalfruitveg.com/api/orders/update-return/$orderId"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"returnStatus": status}),
+      );
+
+      await fetchOrders();
+    } catch (e) {
+      debugPrint("Return update error: $e");
+    }
+  }
+
+  /// ================= CLEAR ERROR =================
   void clearError() {
     _errorMessage = null;
     notifyListeners();
   }
 
-  // ================= CLEANUP =================
+  /// ================= CLEANUP =================
   @override
   void dispose() {
     stopAutoRefresh();
