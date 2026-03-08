@@ -137,6 +137,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
         builder: (_) {
           return AlertDialog(
             title: const Text("Assign Delivery Boy"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              )
+            ],
             content: SizedBox(
               width: 300,
               child: ListView.builder(
@@ -151,12 +157,20 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     trailing: ElevatedButton(
                       child: const Text("Assign"),
                       onPressed: () async {
+
+                        /// Assign delivery boy
                         await context
                             .read<OrderProvider>()
                             .assignDeliveryBoy(order.id, boy.id);
 
+                        /// Update order status
+                        await context
+                            .read<OrderProvider>()
+                            .updateOrderStatus(order.id, 'out_for_delivery');
+
                         Navigator.pop(context);
 
+                        /// Refresh orders
                         await context.read<OrderProvider>().fetchOrders();
                       },
                     ),
@@ -327,11 +341,16 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     backgroundColor: Colors.green,
                   ),
                   onPressed: () async {
+
                     await context
                         .read<OrderProvider>()
                         .updateOrderStatus(order.id, 'accepted');
 
                     await context.read<OrderProvider>().fetchOrders();
+
+                    if (!mounted) return;
+
+                    _showAssignDeliveryDialog(order);
                   },
                   child: const Text("Accept Order"),
                 ),
