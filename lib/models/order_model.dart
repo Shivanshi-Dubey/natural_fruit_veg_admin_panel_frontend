@@ -24,6 +24,10 @@ class Order {
   final String customerName;
   final List<OrderItem> items;
   final double deliveryCharge;
+  final double handlingCharge;
+  final double grandTotal;
+
+
   final String orderStatus;
 
   /// ✅ RETURN STATUS
@@ -43,6 +47,8 @@ class Order {
     required this.customerName,
     required this.items,
     required this.deliveryCharge,
+    required this.handlingCharge,
+    required this.grandTotal,
     required this.orderStatus,
     required this.returnStatus, // ✅ ADDED HERE
     required this.paymentMethod,
@@ -91,6 +97,10 @@ class Order {
           .toList(),
       deliveryCharge:
           (json['deliveryCharge'] ?? 0).toDouble(),
+      handlingCharge:
+          (json['handlingCharge'] ?? 0).toDouble(),
+      grandTotal:
+          (json['grandTotal'] ?? 0).toDouble(), 
       orderStatus:
           (json['orderStatus'] ?? 'placed') as String,
 
@@ -121,6 +131,5 @@ class Order {
       items.fold(0, (sum, i) => sum + (i.price * i.quantity));
 
   /// Total including delivery
-  double get totalPrice =>
-      itemsTotal + deliveryCharge;
+  double get totalPrice =>grandTotal;
 }

@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-
+import 'package:audioplayers/audioplayers.dart';
 import '../layouts/admin_layout.dart';
 import '../models/order_model.dart';
 import '../models/delivery_boy.dart';
@@ -29,6 +29,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
   String searchQuery = "";
   String dateFilter = "all";
 
+final AudioPlayer player = AudioPlayer();
+
   @override
   void initState() {
     super.initState();
@@ -41,10 +43,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
           .build(),
     );
 
-    socket.on('newOrder', (_) {
-      context.read<OrderProvider>().fetchOrders();
-      _showNewOrderPopup();
-    });
+    socket.on('newOrder', (_) async {
+
+  context.read<OrderProvider>().fetchOrders();
+
+  await player.play(AssetSource('sounds/new_order.mp3'));
+
+  _showNewOrderPopup();
+});
   }
 
   @override
@@ -98,14 +104,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
     double upiRevenue = 0;
 
     for (var o in orders) {
-      totalRevenue += o.totalPrice;
+      totalRevenue += o.grandTotal;
 
       if (o.paymentMethod == 'cod' && o.paymentStatus == 'pending') {
-        codPending += o.totalPrice;
+        codPending += o.grandTotal;
       }
 
       if (o.paymentMethod == 'upi' && o.paymentStatus == 'paid') {
-        upiRevenue += o.totalPrice;
+        upiRevenue += o.grandTotal;
       }
     }
 
@@ -305,10 +311,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
           const SizedBox(height: 10),
 
           Text("Customer: ${order.customerName}"),
-          Text(
-            "Total: ₹${order.totalPrice.toStringAsFixed(0)}",
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
+Text(
+  "Total: ₹${order.grandTotal.toStringAsFixed(0)}",
+  style: const TextStyle(
+    fontWeight: FontWeight.w600,
+  ),
+),
 
           const Divider(height: 24),
 
@@ -392,7 +400,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
             pw.SizedBox(height: 10),
             ...order.items.map((i) => pw.Text("${i.name} x${i.quantity}")),
             pw.Divider(),
-            pw.Text("Total: ₹${order.totalPrice.toStringAsFixed(0)}"),
+            pw.Text("Grand Total: ₹${order.grandTotal.toStringAsFixed(0)}"),
           ],
         ),
       ),
