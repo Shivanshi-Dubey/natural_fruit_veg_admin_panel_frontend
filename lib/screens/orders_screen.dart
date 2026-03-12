@@ -47,7 +47,7 @@ final AudioPlayer player = AudioPlayer();
 
   context.read<OrderProvider>().fetchOrders();
 
-  await player.play(AssetSource('sounds/new_order.mp3'));
+  await player.play(AssetSource('sounds/new_order.mp3.mp3'));
 
   _showNewOrderPopup();
 });
