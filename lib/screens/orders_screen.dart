@@ -51,6 +51,33 @@ final AudioPlayer player = AudioPlayer();
 
   _showNewOrderPopup();
 });
+
+  // ✅ ADD THIS — listen for return requests
+socket.on("return-request", (data) async {
+  if (!mounted) return;
+
+  debugPrint("🔄 Return request received: $data");
+
+  // Refresh orders list
+  await context.read<OrderProvider>().fetchOrders();
+
+  // Show popup to admin
+  showDialog(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text("↩️ Return Request"),
+      content: Text(
+        "Customer has requested a return for order #${data['orderId'].toString().substring(data['orderId'].toString().length - 6)}",
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("View Orders"),
+        ),
+      ],
+    ),
+  );
+});
   }
 
   @override
@@ -70,6 +97,8 @@ final AudioPlayer player = AudioPlayer();
       ),
     );
   }
+
+
 
   /// ================= FILTERS =================
 
@@ -374,6 +403,52 @@ Text(
                   },
                   child: const Text("Assign Delivery"),
                 ),
+
+                // ✅ ADD — show return request badge + approve/reject buttons
+if (order.returnStatus == 'requested') ...[
+  Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    decoration: BoxDecoration(
+      color: Colors.orange.shade50,
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: Colors.orange.shade300),
+    ),
+    child: const Text(
+      "↩️ Return Requested",
+      style: TextStyle(
+        color: Colors.orange,
+        fontWeight: FontWeight.w600,
+        fontSize: 13,
+      ),
+    ),
+  ),
+  ElevatedButton(
+    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+    onPressed: () async {
+      await http.put(
+        Uri.parse(
+          "https://naturalfruitveg.com/api/orders/update-return/${order.id}"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"returnStatus": "approved"}),
+      );
+      await context.read<OrderProvider>().fetchOrders();
+    },
+    child: const Text("Approve Return"),
+  ),
+  ElevatedButton(
+    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+    onPressed: () async {
+      await http.put(
+        Uri.parse(
+          "https://naturalfruitveg.com/api/orders/update-return/${order.id}"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"returnStatus": "rejected"}),
+      );
+      await context.read<OrderProvider>().fetchOrders();
+    },
+    child: const Text("Reject Return"),
+  ),
+],
             ],
           ),
         ],
