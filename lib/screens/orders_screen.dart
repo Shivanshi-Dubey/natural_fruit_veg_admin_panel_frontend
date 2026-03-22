@@ -1,23 +1,23 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:audioplayers/audioplayers.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:js' as js;
 import '../layouts/admin_layout.dart';
 import '../models/order_model.dart';
 import '../models/delivery_boy.dart';
 import '../providers/order_provider.dart';
+import '../utils/invoice_generator.dart';
 
 class OrdersScreen extends StatefulWidget {
   final bool showOnlyPaid;
-
-  const OrdersScreen({
-    super.key,
-    this.showOnlyPaid = false,
-  });
+  const OrdersScreen({super.key, this.showOnlyPaid = false});
 
   @override
   State<OrdersScreen> createState() => _OrdersScreenState();
@@ -25,15 +25,15 @@ class OrdersScreen extends StatefulWidget {
 
 class _OrdersScreenState extends State<OrdersScreen> {
   late IO.Socket socket;
-
   String searchQuery = "";
   String dateFilter = "all";
-
-final AudioPlayer player = AudioPlayer();
+  final AudioPlayer player = AudioPlayer();
 
   @override
   void initState() {
     super.initState();
+
+    _requestNotificationPermission();
 
     socket = IO.io(
       'https://naturalfruitveg.com',
@@ -43,107 +43,155 @@ final AudioPlayer player = AudioPlayer();
           .build(),
     );
 
+    socket.onConnect((_) {
+      debugPrint("Admin socket connected: ${socket.id}");
+    });
+
+    socket.onDisconnect((_) {
+      debugPrint("Admin socket disconnected");
+    });
+
+    // ✅ New order listener
     socket.on('newOrder', (_) async {
+      if (!mounted) return;
+      context.read<OrderProvider>().fetchOrders();
+      _playSound();
+      _showBrowserNotification("New Order!", "A new order has been placed.");
+      _showNewOrderPopup();
+    });
 
-  context.read<OrderProvider>().fetchOrders();
-
-  await player.play(AssetSource('sounds/new_order.mp3.mp3'));
-
-  _showNewOrderPopup();
-});
-
-  // ✅ ADD THIS — listen for return requests
-socket.on("return-request", (data) async {
-  if (!mounted) return;
-
-  debugPrint("🔄 Return request received: $data");
-
-  // Refresh orders list
-  await context.read<OrderProvider>().fetchOrders();
-
-  // Show popup to admin
-  showDialog(
-    context: context,
-    builder: (_) => AlertDialog(
-      title: const Text("↩️ Return Request"),
-      content: Text(
-        "Customer has requested a return for order #${data['orderId'].toString().substring(data['orderId'].toString().length - 6)}",
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text("View Orders"),
+    // ✅ Return request listener
+    socket.on("return-request", (data) async {
+      if (!mounted) return;
+      debugPrint("Return request: $data");
+      await context.read<OrderProvider>().fetchOrders();
+      _showBrowserNotification(
+        "Return Request",
+        "Customer requested return for order #${data['orderId'].toString().substring(data['orderId'].toString().length - 6)}",
+      );
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Return Request"),
+          content: Text(
+            "Customer requested return for order #${data['orderId'].toString().substring(data['orderId'].toString().length - 6)}",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("OK"),
+            ),
+          ],
         ),
-      ],
-    ),
-  );
-});
+      );
+    });
+  }
+
+  void _requestNotificationPermission() {
+    if (kIsWeb) {
+      try {
+        js.context.callMethod('eval', ["""
+          if ('Notification' in window) {
+            Notification.requestPermission().then(function(p) {
+              console.log('Notification permission:', p);
+            });
+          }
+        """]);
+      } catch (e) {
+        debugPrint("Notification permission error: $e");
+      }
+    }
+  }
+
+  void _showBrowserNotification(String title, String body) {
+    if (kIsWeb) {
+      try {
+        js.context.callMethod('eval', ["""
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('$title', {
+              body: '$body',
+              icon: '/icons/Icon-192.png'
+            });
+          }
+        """]);
+      } catch (e) {
+        debugPrint("Browser notification error: $e");
+      }
+    }
+  }
+
+  void _playSound() {
+    if (kIsWeb) {
+      try {
+        js.context.callMethod('eval', ["""
+          var audio = new Audio('/assets/assets/sounds/new_order.mp3');
+          audio.play().catch(function(e) {
+            console.log('Audio blocked:', e);
+          });
+        """]);
+      } catch (e) {
+        debugPrint("Sound error: $e");
+      }
+    } else {
+      player.play(AssetSource('sounds/new_order.mp3'));
+    }
   }
 
   @override
   void dispose() {
     socket.dispose();
+    player.dispose();
     super.dispose();
   }
 
   void _showNewOrderPopup() {
     if (!mounted) return;
-
     showDialog(
       context: context,
       builder: (_) => const AlertDialog(
-        title: Text("🆕 New Order"),
+        title: Text("New Order"),
         content: Text("A new order has been placed."),
       ),
     );
   }
 
-
-
-  /// ================= FILTERS =================
-
   List<Order> _applyFilters(List<Order> orders) {
     List<Order> filtered = orders;
-
     if (searchQuery.isNotEmpty) {
-      filtered = filtered.where((o) =>
-          o.customerName.toLowerCase().contains(searchQuery.toLowerCase()) ||
-          o.id.contains(searchQuery)).toList();
+      filtered = filtered
+          .where((o) =>
+              o.customerName
+                  .toLowerCase()
+                  .contains(searchQuery.toLowerCase()) ||
+              o.id.contains(searchQuery))
+          .toList();
     }
-
     if (dateFilter == "today") {
       final today = DateTime.now();
-      filtered = filtered.where((o) =>
-          o.createdAt.year == today.year &&
-          o.createdAt.month == today.month &&
-          o.createdAt.day == today.day).toList();
+      filtered = filtered
+          .where((o) =>
+              o.createdAt.year == today.year &&
+              o.createdAt.month == today.month &&
+              o.createdAt.day == today.day)
+          .toList();
     }
-
     if (dateFilter == "week") {
       final weekAgo = DateTime.now().subtract(const Duration(days: 7));
-      filtered = filtered.where((o) => o.createdAt.isAfter(weekAgo)).toList();
+      filtered =
+          filtered.where((o) => o.createdAt.isAfter(weekAgo)).toList();
     }
-
     return filtered;
   }
 
   Map<String, dynamic> _calculateStats(List<Order> orders) {
-    double totalRevenue = 0;
-    double codPending = 0;
-    double upiRevenue = 0;
-
+    double totalRevenue = 0, codPending = 0, upiRevenue = 0;
     for (var o in orders) {
       totalRevenue += o.grandTotal;
-
-      if (o.paymentMethod == 'cod' && o.paymentStatus == 'pending') {
+      if (o.paymentMethod == 'cod' && o.paymentStatus == 'pending')
         codPending += o.grandTotal;
-      }
-
-      if (o.paymentMethod == 'upi' && o.paymentStatus == 'paid') {
+      if (o.paymentMethod == 'upi' && o.paymentStatus == 'paid')
         upiRevenue += o.grandTotal;
-      }
     }
-
     return {
       "totalOrders": orders.length,
       "totalRevenue": totalRevenue,
@@ -152,16 +200,11 @@ socket.on("return-request", (data) async {
     };
   }
 
-  /// ================= ASSIGN DELIVERY BOY =================
-
   Future<void> _showAssignDeliveryDialog(Order order) async {
     try {
-      final response = await http.get(
-        Uri.parse("https://naturalfruitveg.com/api/delivery-boys"),
-      );
-
+      final response = await http
+          .get(Uri.parse("https://naturalfruitveg.com/api/delivery-boys"));
       final data = jsonDecode(response.body);
-
       List<DeliveryBoy> boys =
           (data as List).map((e) => DeliveryBoy.fromJson(e)).toList();
 
@@ -169,55 +212,66 @@ socket.on("return-request", (data) async {
 
       showDialog(
         context: context,
-        builder: (_) {
-          return AlertDialog(
-            title: const Text("Assign Delivery Boy"),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Cancel"),
-              )
-            ],
-            content: SizedBox(
-              width: 300,
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: boys.length,
-                itemBuilder: (context, index) {
-                  final boy = boys[index];
+        builder: (_) => AlertDialog(
+          title: const Text("Assign Delivery Boy"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            )
+          ],
+          content: SizedBox(
+            width: 300,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: boys.length,
+              itemBuilder: (context, index) {
+                final boy = boys[index];
+                return ListTile(
+                  title: Text(boy.name),
+                  subtitle: Text(boy.phone),
+                  trailing: ElevatedButton(
+                    child: const Text("Assign"),
+                    onPressed: () async {
+                      // ✅ FIX 3: Only assign delivery boy, keep status as 'packed'
+                      // Do NOT set out_for_delivery — delivery boy will do that
+                      await context
+                          .read<OrderProvider>()
+                          .assignDeliveryBoy(order.id, boy.id);
 
-                  return ListTile(
-                    title: Text(boy.name),
-                    subtitle: Text(boy.phone),
-                    trailing: ElevatedButton(
-                      child: const Text("Assign"),
-                      onPressed: () async {
+                      Navigator.pop(context);
+                      await context.read<OrderProvider>().fetchOrders();
 
-                        /// Assign delivery boy
-                        await context
-                            .read<OrderProvider>()
-                            .assignDeliveryBoy(order.id, boy.id);
-
-                        /// Update order status
-                        await context
-                            .read<OrderProvider>()
-                            .updateOrderStatus(order.id, 'out_for_delivery');
-
-                        Navigator.pop(context);
-
-                        /// Refresh orders
-                        await context.read<OrderProvider>().fetchOrders();
-                      },
-                    ),
-                  );
-                },
-              ),
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                "${boy.name} assigned to order #${order.id.substring(order.id.length - 6)}"),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                );
+              },
             ),
-          );
-        },
+          ),
+        ),
       );
     } catch (e) {
       debugPrint(e.toString());
+    }
+  }
+
+  Future<String> _checkNotificationPermission() async {
+    if (!kIsWeb) return 'granted';
+    try {
+      final result = js.context
+          .callMethod('eval', ["Notification.permission"]) as String;
+      return result;
+    } catch (e) {
+      return 'default';
     }
   }
 
@@ -239,22 +293,62 @@ socket.on("return-request", (data) async {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
 
-                    /// SEARCH
+                    // ✅ Notification permission banner
+                    if (kIsWeb)
+                      FutureBuilder<String>(
+                        future: _checkNotificationPermission(),
+                        builder: (context, snap) {
+                          if (snap.data == 'denied' ||
+                              snap.data == 'default') {
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                    color: Colors.orange.shade300),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.notifications_off,
+                                      color: Colors.orange),
+                                  const SizedBox(width: 10),
+                                  const Expanded(
+                                    child: Text(
+                                      "Enable notifications to get new order alerts",
+                                      style: TextStyle(fontSize: 13),
+                                    ),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed:
+                                        _requestNotificationPermission,
+                                    style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.orange),
+                                    child: const Text("Enable",
+                                        style: TextStyle(
+                                            color: Colors.white)),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+
+                    // SEARCH
                     TextField(
                       decoration: const InputDecoration(
                         hintText: "Search by customer or order ID",
                         prefixIcon: Icon(Icons.search),
                       ),
-                      onChanged: (value) {
-                        setState(() {
-                          searchQuery = value;
-                        });
-                      },
+                      onChanged: (v) => setState(() => searchQuery = v),
                     ),
 
                     const SizedBox(height: 20),
 
-                    /// DATE FILTER
+                    // DATE FILTER
                     Row(
                       children: [
                         _dateButton("All", "all"),
@@ -267,7 +361,7 @@ socket.on("return-request", (data) async {
 
                     const SizedBox(height: 25),
 
-                    /// DASHBOARD STATS
+                    // STATS
                     Wrap(
                       spacing: 16,
                       runSpacing: 16,
@@ -276,22 +370,22 @@ socket.on("return-request", (data) async {
                             stats["totalOrders"].toString(), Colors.blue),
                         _statCard(
                             "Total Revenue",
-                            "₹${stats["totalRevenue"].toStringAsFixed(0)}",
+                            "Rs.${stats["totalRevenue"].toStringAsFixed(0)}",
                             Colors.green),
                         _statCard(
                             "COD Pending",
-                            "₹${stats["codPending"].toStringAsFixed(0)}",
+                            "Rs.${stats["codPending"].toStringAsFixed(0)}",
                             Colors.red),
                         _statCard(
                             "UPI Revenue",
-                            "₹${stats["upiRevenue"].toStringAsFixed(0)}",
+                            "Rs.${stats["upiRevenue"].toStringAsFixed(0)}",
                             Colors.orange),
                       ],
                     ),
 
                     const SizedBox(height: 30),
 
-                    /// ORDERS LIST
+                    // ORDERS LIST
                     if (orders.isEmpty)
                       const Center(child: Text("No orders found"))
                     else
@@ -299,10 +393,8 @@ socket.on("return-request", (data) async {
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: orders.length,
-                        itemBuilder: (context, index) {
-                          final order = orders[index];
-                          return _buildOrderCard(order);
-                        },
+                        itemBuilder: (context, index) =>
+                            _buildOrderCard(orders[index]),
                       ),
                   ],
                 ),
@@ -310,8 +402,6 @@ socket.on("return-request", (data) async {
             ),
     );
   }
-
-  /// ================= ORDER CARD =================
 
   Widget _buildOrderCard(Order order) {
     return Container(
@@ -325,7 +415,6 @@ socket.on("return-request", (data) async {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -340,20 +429,29 @@ socket.on("return-request", (data) async {
           const SizedBox(height: 10),
 
           Text("Customer: ${order.customerName}"),
-Text(
-  "Total: ₹${order.grandTotal.toStringAsFixed(0)}",
-  style: const TextStyle(
-    fontWeight: FontWeight.w600,
-  ),
-),
+          Text(
+            "Total: Rs.${order.grandTotal.toStringAsFixed(0)}",
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+
+          if (order.deliveryBoyName != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                "Delivery: ${order.deliveryBoyName}",
+                style: const TextStyle(
+                    color: Colors.blue, fontSize: 13),
+              ),
+            ),
 
           const Divider(height: 24),
 
           ...order.items.map((i) => Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(child: Text("${i.name} × ${i.quantity}")),
-                  Text("₹${(i.price * i.quantity).toStringAsFixed(0)}"),
+                  Expanded(child: Text("${i.name} x ${i.quantity}")),
+                  Text(
+                      "Rs.${(i.price * i.quantity).toStringAsFixed(0)}"),
                 ],
               )),
 
@@ -363,125 +461,97 @@ Text(
             spacing: 10,
             runSpacing: 10,
             children: [
-
-              /// PRINT
-              OutlinedButton.icon(
-                icon: const Icon(Icons.print),
-                label: const Text("Print"),
-                onPressed: () => _printOrder(order),
+              // INVOICE
+              ElevatedButton.icon(
+                icon: const Icon(Icons.download, size: 16),
+                label: const Text("Invoice"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2E7D32),
+                ),
+                onPressed: () =>
+                    InvoiceGenerator.downloadInvoice(context, order),
               ),
 
-              /// ACCEPT ORDER
+              // ACCEPT ORDER
               if (order.orderStatus == 'placed')
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                  ),
+                      backgroundColor: Colors.green),
                   onPressed: () async {
-
                     await context
                         .read<OrderProvider>()
                         .updateOrderStatus(order.id, 'accepted');
-
                     await context.read<OrderProvider>().fetchOrders();
-
                     if (!mounted) return;
-
                     _showAssignDeliveryDialog(order);
                   },
                   child: const Text("Accept Order"),
                 ),
 
-              /// ASSIGN DELIVERY
+              // ASSIGN DELIVERY
               if (order.orderStatus == 'accepted')
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                  ),
-                  onPressed: () {
-                    _showAssignDeliveryDialog(order);
-                  },
+                      backgroundColor: Colors.blue),
+                  onPressed: () => _showAssignDeliveryDialog(order),
                   child: const Text("Assign Delivery"),
                 ),
 
-                // ✅ ADD — show return request badge + approve/reject buttons
-if (order.returnStatus == 'requested') ...[
-  Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-    decoration: BoxDecoration(
-      color: Colors.orange.shade50,
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: Colors.orange.shade300),
-    ),
-    child: const Text(
-      "↩️ Return Requested",
-      style: TextStyle(
-        color: Colors.orange,
-        fontWeight: FontWeight.w600,
-        fontSize: 13,
-      ),
-    ),
-  ),
-  ElevatedButton(
-    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-    onPressed: () async {
-      await http.put(
-        Uri.parse(
-          "https://naturalfruitveg.com/api/orders/update-return/${order.id}"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"returnStatus": "approved"}),
-      );
-      await context.read<OrderProvider>().fetchOrders();
-    },
-    child: const Text("Approve Return"),
-  ),
-  ElevatedButton(
-    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-    onPressed: () async {
-      await http.put(
-        Uri.parse(
-          "https://naturalfruitveg.com/api/orders/update-return/${order.id}"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"returnStatus": "rejected"}),
-      );
-      await context.read<OrderProvider>().fetchOrders();
-    },
-    child: const Text("Reject Return"),
-  ),
-],
+              // RETURN REQUEST
+              if (order.returnStatus == 'requested') ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border:
+                        Border.all(color: Colors.orange.shade300),
+                  ),
+                  child: const Text(
+                    "Return Requested",
+                    style: TextStyle(
+                        color: Colors.orange,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13),
+                  ),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green),
+                  onPressed: () async {
+                    await http.put(
+                      Uri.parse(
+                          "https://naturalfruitveg.com/api/orders/update-return/${order.id}"),
+                      headers: {"Content-Type": "application/json"},
+                      body:
+                          jsonEncode({"returnStatus": "approved"}),
+                    );
+                    await context.read<OrderProvider>().fetchOrders();
+                  },
+                  child: const Text("Approve Return"),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red),
+                  onPressed: () async {
+                    await http.put(
+                      Uri.parse(
+                          "https://naturalfruitveg.com/api/orders/update-return/${order.id}"),
+                      headers: {"Content-Type": "application/json"},
+                      body:
+                          jsonEncode({"returnStatus": "rejected"}),
+                    );
+                    await context.read<OrderProvider>().fetchOrders();
+                  },
+                  child: const Text("Reject Return"),
+                ),
+              ],
             ],
           ),
         ],
       ),
     );
-  }
-
-  /// ================= PRINT =================
-
-  Future<void> _printOrder(Order order) async {
-    final pdf = pw.Document();
-
-    pdf.addPage(
-      pw.Page(
-        build: (_) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text("Natural Fruit & Veg",
-                style: pw.TextStyle(
-                    fontSize: 20, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 10),
-            pw.Text("Order ID: ${order.id}"),
-            pw.Text("Customer: ${order.customerName}"),
-            pw.SizedBox(height: 10),
-            ...order.items.map((i) => pw.Text("${i.name} x${i.quantity}")),
-            pw.Divider(),
-            pw.Text("Grand Total: ₹${order.grandTotal.toStringAsFixed(0)}"),
-          ],
-        ),
-      ),
-    );
-
-    await Printing.layoutPdf(onLayout: (format) async => pdf.save());
   }
 
   Widget _statCard(String title, String value, Color color) {
@@ -497,11 +567,11 @@ if (order.returnStatus == 'requested') ...[
         children: [
           Text(title),
           const SizedBox(height: 6),
-          Text(
-            value,
-            style: TextStyle(
-                fontSize: 18, fontWeight: FontWeight.bold, color: color),
-          ),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: color)),
         ],
       ),
     );
@@ -509,17 +579,12 @@ if (order.returnStatus == 'requested') ...[
 
   Widget _dateButton(String text, String value) {
     final selected = dateFilter == value;
-
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
         backgroundColor: selected ? Colors.black : Colors.grey[300],
         foregroundColor: selected ? Colors.white : Colors.black,
       ),
-      onPressed: () {
-        setState(() {
-          dateFilter = value;
-        });
-      },
+      onPressed: () => setState(() => dateFilter = value),
       child: Text(text),
     );
   }
@@ -543,7 +608,6 @@ class _StatusChip extends StatelessWidget {
       default:
         color = Colors.grey;
     }
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -553,10 +617,7 @@ class _StatusChip extends StatelessWidget {
       child: Text(
         status.toUpperCase(),
         style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: color,
-        ),
+            fontSize: 12, fontWeight: FontWeight.bold, color: color),
       ),
     );
   }
