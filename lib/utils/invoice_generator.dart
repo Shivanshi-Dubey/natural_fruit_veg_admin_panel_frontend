@@ -5,6 +5,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../models/order_model.dart';
+import 'package:flutter/services.dart';
 
 class InvoiceGenerator {
   // ===== STORE INFO — update these =====
@@ -50,6 +51,8 @@ class InvoiceGenerator {
         DateFormat('dd-MM-yyyy').format(order.createdAt);
     final orderTime =
         DateFormat('hh:mm a').format(order.createdAt);
+    final logoBytes = await rootBundle.load('assets/best_logo.png');
+final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());   
 
     doc.addPage(
       pw.Page(
@@ -110,14 +113,16 @@ class InvoiceGenerator {
                       border: pw.Border.all(
                           color: headerBg, width: 2),
                     ),
-                    child: pw.Center(
-                      child: pw.Text(
-                        "🌿",
-                        style: pw.TextStyle(
-                            font: fontBold, fontSize: 22),
-                      ),
-                    ),
-                  ),
+                    child: pw.ClipOval(
+  child: pw.Padding(
+    padding: const pw.EdgeInsets.all(6),
+    child: pw.Image(
+      logoImage,
+      fit: pw.BoxFit.contain,
+    ),
+  ),
+  ),
+),
                 ],
               ),
 
