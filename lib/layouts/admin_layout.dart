@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../screens/dashboard_screen.dart';
 import '../screens/manage_products_screen.dart';
 import '../screens/orders_screen.dart';
+import '../screens/returns_screen.dart';           // ✅ NEW
+import '../screens/cash_collection_screen.dart';   // ✅ NEW
 import '../screens/add_product_screen.dart';
 import '../screens/customers_screen.dart';
 import '../screens/reports_screen.dart';
@@ -31,7 +33,6 @@ class AdminLayout extends StatelessWidget {
   final String title;
   final bool showBack;
 
-  /// 🔍 Optional global search callback
   final ValueChanged<String>? onSearch;
 
   const AdminLayout({
@@ -100,6 +101,11 @@ class AdminLayout extends StatelessWidget {
                       'All Orders',
                       const OrdersScreen(),
                     ),
+                    _subMenuItem(             // ✅ NEW
+                      context,
+                      'Returns',
+                      const ReturnsScreen(),
+                    ),
                   ],
                 ),
 
@@ -146,9 +152,7 @@ class AdminLayout extends StatelessWidget {
                     _subMenuItem(
                       context,
                       'GRN (Receipt)',
-                      const GrnScreen(
-                         purchaseInvoiceId: 'all',
-                      ),
+                      const GrnScreen(purchaseInvoiceId: 'all'),
                     ),
                     _subMenuItem(
                       context,
@@ -158,36 +162,48 @@ class AdminLayout extends StatelessWidget {
                   ],
                 ),
 
+                // ================= DELIVERY =================   ✅ NEW SECTION
+                _sectionTitle('Delivery'),
+                _expandableSection(
+                  icon: Icons.delivery_dining,
+                  title: 'Delivery Boys',
+                  children: [
+                    _subMenuItem(
+                      context,
+                      'Cash Collection',
+                      const CashCollectionScreen(),
+                    ),
+                  ],
+                ),
+
+                // ================= FINANCE =================
                 _sectionTitle('FINANCE'),
+                _expandableSection(
+                  icon: Icons.account_balance_wallet,
+                  title: 'Finance',
+                  children: [
+                    _subSectionTitle('Master'),
+                    _subMenuItem(context, 'Accounts', const AccountsScreen()),
+                    _subMenuItem(context, 'Banks', const BanksScreen()),
+                    _subMenuItem(context, 'Opening Balance', const OpeningBalanceScreen()),
 
-_expandableSection(
-  icon: Icons.account_balance_wallet,
-  title: 'Finance',
-  children: [
+                    _subSectionTitle('Receipts'),
+                    _subMenuItem(context, 'Receipt', const AddReceiptScreen()),
+                    _subMenuItem(context, 'Receipt List', const ReceiptsScreen()),
 
-    _subSectionTitle('Master'),
-    _subMenuItem(context, 'Accounts', const AccountsScreen()),
-    _subMenuItem(context, 'Banks', const BanksScreen()),
-    _subMenuItem(context, 'Opening Balance', const OpeningBalanceScreen()),
+                    _subSectionTitle('Payments'),
+                    _subMenuItem(context, 'Payment', const AddPaymentScreen()),
+                    _subMenuItem(context, 'Payment List', const PaymentsScreen()),
 
-    _subSectionTitle('Receipts'),
-    _subMenuItem(context, 'Receipt', const AddReceiptScreen()),
-    _subMenuItem(context, 'Receipt List', const ReceiptsScreen()),
+                    _subSectionTitle('Cash / Bank'),
+                    _subMenuItem(context, 'Contra Voucher', const ContraVoucherScreen()),
+                    _subMenuItem(context, 'Contra Voucher List', const ContraVoucherListScreen()),
 
-    _subSectionTitle('Payments'),
-    _subMenuItem(context, 'Payment', const AddPaymentScreen()),
-    _subMenuItem(context, 'Payment List', const PaymentsScreen()),
-
-    _subSectionTitle('Cash / Bank'),
-    _subMenuItem(context, 'Contra Voucher', const ContraVoucherScreen()),
-    _subMenuItem(context, 'Contra Voucher List', const ContraVoucherListScreen()),
-
-    _subSectionTitle('Reconciliation'),
-    _subMenuItem(context, 'Bank Reconciliation', const BankReconciliationScreen()),
-    _subMenuItem(context, 'Party Reconciliation', const PartyReconciliationScreen()),
-  ],
-),
-
+                    _subSectionTitle('Reconciliation'),
+                    _subMenuItem(context, 'Bank Reconciliation', const BankReconciliationScreen()),
+                    _subMenuItem(context, 'Party Reconciliation', const PartyReconciliationScreen()),
+                  ],
+                ),
 
                 // ================= CUSTOMERS =================
                 _sectionTitle('Customers'),
@@ -235,7 +251,6 @@ _expandableSection(
                   ),
                   child: Row(
                     children: [
-                      /// LEFT: Back + Title
                       Row(
                         children: [
                           if (showBack)
@@ -255,7 +270,6 @@ _expandableSection(
 
                       const Spacer(),
 
-                      /// 🔍 GLOBAL SEARCH
                       if (_showSearch)
                         SizedBox(
                           width: 260,
@@ -264,8 +278,7 @@ _expandableSection(
                             onChanged: onSearch,
                             decoration: InputDecoration(
                               hintText: 'Search...',
-                              prefixIcon:
-                                  const Icon(Icons.search, size: 18),
+                              prefixIcon: const Icon(Icons.search, size: 18),
                               contentPadding:
                                   const EdgeInsets.symmetric(vertical: 0),
                               border: OutlineInputBorder(
@@ -277,7 +290,6 @@ _expandableSection(
 
                       const SizedBox(width: 16),
 
-                      /// PROFILE
                       const CircleAvatar(
                         radius: 18,
                         child: Icon(Icons.person),
@@ -286,7 +298,6 @@ _expandableSection(
                   ),
                 ),
 
-                // ---------- PAGE ----------
                 Expanded(child: child),
               ],
             ),
@@ -313,19 +324,18 @@ _expandableSection(
   }
 
   Widget _subSectionTitle(String title) {
-  return Padding(
-    padding: const EdgeInsets.fromLTRB(32, 10, 20, 6),
-    child: Text(
-      title.toUpperCase(),
-      style: const TextStyle(
-        color: Colors.white38,
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(32, 10, 20, 6),
+      child: Text(
+        title.toUpperCase(),
+        style: const TextStyle(
+          color: Colors.white38,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
       ),
-    ),
-  );
-}
-
+    );
+  }
 
   Widget _menuItem(
     BuildContext context, {
