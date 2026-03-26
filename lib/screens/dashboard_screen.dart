@@ -8,12 +8,9 @@ import '../models/order_model.dart';
 import '../providers/product_provider.dart';
 import '../providers/order_provider.dart';
 import '../layouts/admin_layout.dart';
-import '../widgets/kpi_card.dart';
-import '../widgets/revenue_line_chart.dart';
-import '../widgets/order_status_pie_chart.dart';
 
 /// =======================================================
-/// ERP-STYLE DASHBOARD (RUJUL DETAILED)
+/// ERP-STYLE DASHBOARD
 /// =======================================================
 
 class DashboardScreen extends StatefulWidget {
@@ -68,12 +65,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int lowStockCount(List<Product> products) =>
       products.where((p) => p.stock <= 5).length;
 
+  /// ================= FIXED SALES SPOTS =================
   List<FlSpot> salesSpots(List<Order> orders) {
-    final recent = orders.reversed.take(6).toList();
-    return List.generate(
-      recent.length,
-      (i) => FlSpot(i.toDouble(), recent[i].totalPrice),
-    );
+    final now = DateTime.now();
+
+    // ✅ Respect dropdown filter
+    int days = 7;
+    if (_salesFilter == 'Today') days = 1;
+    if (_salesFilter == 'Last 30 Days') days = 30;
+
+    // ✅ Initialize all days to 0
+    final Map<int, double> dailyRevenue = {};
+    for (int i = 0; i < days; i++) {
+      dailyRevenue[i] = 0.0;
+    }
+
+    // ✅ Group orders by day
+    for (final order in orders) {
+      final diff = now
+          .difference(order.createdAt)
+          .inDays;
+      if (diff >= 0 && diff < days) {
+        final key = days - 1 - diff; // left = oldest, right = newest
+        dailyRevenue[key] = (dailyRevenue[key] ?? 0) + order.totalPrice;
+      }
+    }
+
+    // ✅ Convert to FlSpot list sorted by x
+    return dailyRevenue.entries
+        .map((e) => FlSpot(e.key.toDouble(), e.value))
+        .toList()
+      ..sort((a, b) => a.x.compareTo(b.x));
+  }
+
+  /// ================= X AXIS DATE LABEL =================
+  String _dayLabel(int index) {
+    int days = 7;
+    if (_salesFilter == 'Today') days = 1;
+    if (_salesFilter == 'Last 30 Days') days = 30;
+
+    final date = DateTime.now()
+        .subtract(Duration(days: days - 1 - index));
+    return '${date.day}/${date.month}';
   }
 
   /// ================= BUILD =================
@@ -96,7 +129,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  /// ================= KPI =================
+                  /// ================= KPI CARDS =================
                   Row(
                     children: [
                       _KpiCard(
@@ -112,8 +145,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       _KpiCard(
                         label: 'Revenue',
-                        value:
-                            '₹${totalRevenue(orders).toStringAsFixed(0)}',
+                        value: '₹${totalRevenue(orders).toStringAsFixed(0)}',
                         hint: 'Total sales value',
                       ),
                       _KpiCard(
@@ -144,40 +176,114 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               child: Text('Last 30 Days')),
                         ],
                         onChanged: (v) {
-                          if (v != null) {
-                            setState(() => _salesFilter = v);
-                          }
+                          if (v != null) setState(() => _salesFilter = v);
                         },
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
 
+                  /// ================= LINE CHART =================
                   Container(
-                    height: 260,
-                    padding: const EdgeInsets.all(16),
+                    height: 280,
+                    padding: const EdgeInsets.fromLTRB(8, 16, 16, 8),
                     decoration: _box(),
-                    child: LineChart(
-                      LineChartData(
-                        borderData: FlBorderData(show: false),
-                        gridData:
-                            FlGridData(show: true, drawVerticalLine: false),
-                        titlesData: FlTitlesData(show: false),
-                        lineBarsData: [
-                          LineChartBarData(
-                            spots: salesSpots(orders),
-                            isCurved: true,
-                            color: AdminColors.primary,
-                            barWidth: 3,
-                            belowBarData: BarAreaData(
-                              show: true,
-                              color:
-                                  AdminColors.primary.withOpacity(0.08),
+                    child: salesSpots(orders).isEmpty ||
+                            salesSpots(orders)
+                                .every((s) => s.y == 0)
+                        ? const Center(
+                            child: Text(
+                              'No sales data for this period',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          )
+                        : LineChart(
+                            LineChartData(
+                              borderData: FlBorderData(show: false),
+                              gridData: FlGridData(
+                                show: true,
+                                drawVerticalLine: false,
+                                getDrawingHorizontalLine: (value) => FlLine(
+                                  color: AdminColors.border,
+                                  strokeWidth: 1,
+                                ),
+                              ),
+                              titlesData: FlTitlesData(
+                                // ✅ LEFT — Revenue labels
+                                leftTitles: AxisTitles(
+                                  sideTitles: SideTitles(
+                                    showTitles: true,
+                                    reservedSize: 48,
+                                    getTitlesWidget: (value, meta) => Text(
+                                      '₹${value.toInt()}',
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                // ✅ BOTTOM — Date labels
+                                bottomTitles: AxisTitles(
+                                  sideTitles: SideTitles(
+                                    showTitles: true,
+                                    reservedSize: 28,
+                                    getTitlesWidget: (value, meta) {
+                                      final label =
+                                          _dayLabel(value.toInt());
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                            top: 6),
+                                        child: Text(
+                                          label,
+                                          style: const TextStyle(
+                                            fontSize: 9,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                rightTitles: AxisTitles(
+                                    sideTitles:
+                                        SideTitles(showTitles: false)),
+                                topTitles: AxisTitles(
+                                    sideTitles:
+                                        SideTitles(showTitles: false)),
+                              ),
+                              lineBarsData: [
+                                LineChartBarData(
+                                  spots: salesSpots(orders),
+                                  isCurved: true,
+                                  color: AdminColors.primary,
+                                  barWidth: 3,
+                                  dotData: FlDotData(show: true),
+                                  belowBarData: BarAreaData(
+                                    show: true,
+                                    color: AdminColors.primary
+                                        .withOpacity(0.08),
+                                  ),
+                                ),
+                              ],
+                              // ✅ Tooltip showing ₹ value on tap
+                              lineTouchData: LineTouchData(
+                                touchTooltipData: LineTouchTooltipData(
+                                  getTooltipItems: (spots) => spots
+                                      .map(
+                                        (s) => LineTooltipItem(
+                                          '₹${s.y.toStringAsFixed(0)}',
+                                          const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
+                              ),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
                   ),
 
                   const SizedBox(height: 32),
@@ -188,24 +294,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                   Container(
                     decoration: _box(),
-                    child: Column(
-                      children: orders.take(5).map((o) {
-                        return ListTile(
-                          title: Text('Order #${o.id}'),
-                          subtitle: Text(
-                              '₹${o.totalPrice.toStringAsFixed(0)}'),
-                          trailing: Text(
-                            o.status.toUpperCase(),
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: o.status == 'placed'
-                                  ? AdminColors.warning
-                                  : AdminColors.success,
+                    child: orders.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text(
+                              'No orders yet',
+                              style: TextStyle(color: Colors.grey),
                             ),
+                          )
+                        : Column(
+                            children: orders.take(5).map((o) {
+                              return ListTile(
+                                title: Text(
+                                  'Order #${o.id.length > 10 ? o.id.substring(o.id.length - 10) : o.id}',
+                                ),
+                                subtitle: Text(
+                                    '₹${o.totalPrice.toStringAsFixed(0)} • ${o.customerName}'),
+                                trailing: Container(
+                                  padding:
+                                      const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: _statusColor(o.status)
+                                        .withOpacity(0.1),
+                                    borderRadius:
+                                        BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    o.status.toUpperCase(),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 11,
+                                      color: _statusColor(o.status),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
                           ),
-                        );
-                      }).toList(),
-                    ),
                   ),
 
                   const SizedBox(height: 32),
@@ -231,13 +357,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               'Items ≤ 5 (${lowStockCount(products)})',
                           color: AdminColors.warning,
                         ),
+                        const Divider(),
+                        _AnalyticsRow(
+                          title: 'Pending Payments',
+                          subtitle: 'COD orders not yet collected',
+                          color: AdminColors.danger,
+                        ),
                       ],
                     ),
                   ),
+
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
     );
+  }
+
+  Color _statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'placed':
+        return AdminColors.warning;
+      case 'delivered':
+        return AdminColors.success;
+      case 'cancelled':
+        return AdminColors.danger;
+      default:
+        return Colors.blueGrey;
+    }
   }
 
   static BoxDecoration _box() => BoxDecoration(
@@ -257,8 +404,7 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       title,
-      style:
-          const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
     );
   }
 }
@@ -287,8 +433,8 @@ class _KpiCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(label,
-                style: const TextStyle(
-                    fontSize: 13, color: Colors.grey)),
+                style:
+                    const TextStyle(fontSize: 13, color: Colors.grey)),
             const SizedBox(height: 6),
             Text(
               value,
@@ -301,7 +447,8 @@ class _KpiCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               hint,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              style:
+                  const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
         ),
@@ -323,29 +470,32 @@ class _AnalyticsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title,
-                style:
-                    const TextStyle(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 4),
-            Text(subtitle,
-                style:
-                    const TextStyle(color: Colors.grey, fontSize: 13)),
-          ],
-        ),
-        Text(
-          'View',
-          style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.w600,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style:
+                      const TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Text(subtitle,
+                  style: const TextStyle(
+                      color: Colors.grey, fontSize: 13)),
+            ],
           ),
-        ),
-      ],
+          Text(
+            'View',
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
