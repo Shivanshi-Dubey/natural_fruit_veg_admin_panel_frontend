@@ -65,6 +65,250 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int lowStockCount(List<Product> products) =>
       products.where((p) => p.stock <= 5).length;
 
+  /// ================= BOTTOM SHEETS =================
+
+  void _showDeadProducts(List<Product> products, List<Order> orders) {
+    // Products that have stock but never appear in any order
+    final soldProductIds = <String>{};
+    for (final o in orders) {
+      for (final i in o.items) {
+        soldProductIds.add(i.name); // using name as identifier
+      }
+    }
+    final dead = products
+        .where((p) => p.stock > 0 && !soldProductIds.contains(p.name))
+        .toList();
+
+    _showBottomSheet(
+      title: '🪦 Dead Products',
+      subtitle: 'Stock available but never sold',
+      color: AdminColors.danger,
+      child: dead.isEmpty
+          ? const _EmptyState(message: 'No dead products found 🎉')
+          : ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: dead.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (_, i) {
+                final p = dead[i];
+                return ListTile(
+                  leading: const CircleAvatar(
+                    backgroundColor: Color(0xFFFFEEEE),
+                    child: Icon(Icons.inventory_2, color: AdminColors.danger, size: 18),
+                  ),
+                  title: Text(p.name,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text('Stock: ${p.stock} units'),
+                  trailing: Text(
+                    '₹${p.price.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                        color: AdminColors.danger, fontWeight: FontWeight.bold),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  void _showLowStockProducts(List<Product> products) {
+    final low = products.where((p) => p.stock <= 5).toList()
+      ..sort((a, b) => a.stock.compareTo(b.stock));
+
+    _showBottomSheet(
+      title: '⚠️ Low Stock Products',
+      subtitle: 'Items with stock ≤ 5',
+      color: AdminColors.warning,
+      child: low.isEmpty
+          ? const _EmptyState(message: 'All products are well stocked 🎉')
+          : ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: low.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (_, i) {
+                final p = low[i];
+                final isOut = p.stock == 0;
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: isOut
+                        ? const Color(0xFFFFEEEE)
+                        : const Color(0xFFFFF8E1),
+                    child: Text(
+                      '${p.stock}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isOut ? AdminColors.danger : AdminColors.warning,
+                      ),
+                    ),
+                  ),
+                  title: Text(p.name,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(isOut ? 'Out of stock!' : '${p.stock} units left'),
+                  trailing: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: (isOut ? AdminColors.danger : AdminColors.warning)
+                          .withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      isOut ? 'OUT' : 'LOW',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color:
+                            isOut ? AdminColors.danger : AdminColors.warning,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  void _showPendingPayments(List<Order> orders) {
+    final pending = orders
+        .where((o) =>
+            o.paymentMethod == 'cod' &&
+            !o.cashDepositedToAdmin &&
+            o.orderStatus == 'delivered')
+        .toList();
+
+    final totalPending =
+        pending.fold<double>(0, (sum, o) => sum + o.totalPrice);
+
+    _showBottomSheet(
+      title: '💰 Pending Payments',
+      subtitle: 'COD orders not yet deposited to admin',
+      color: AdminColors.danger,
+      headerExtra: pending.isEmpty
+          ? null
+          : Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFEEEE),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Total Pending',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  Text(
+                    '₹${totalPending.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      color: AdminColors.danger,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+      child: pending.isEmpty
+          ? const _EmptyState(message: 'No pending payments 🎉')
+          : ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: pending.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (_, i) {
+                final o = pending[i];
+                final shortId = o.id.length > 10
+                    ? o.id.substring(o.id.length - 10)
+                    : o.id;
+                return ListTile(
+                  leading: const CircleAvatar(
+                    backgroundColor: Color(0xFFFFEEEE),
+                    child: Icon(Icons.money_off,
+                        color: AdminColors.danger, size: 18),
+                  ),
+                  title: Text('Order #$shortId',
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(o.customerName),
+                  trailing: Text(
+                    '₹${o.totalPrice.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                        color: AdminColors.danger,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  void _showBottomSheet({
+    required String title,
+    required String subtitle,
+    required Color color,
+    required Widget child,
+    Widget? headerExtra,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.6,
+        maxChildSize: 0.92,
+        minChildSize: 0.4,
+        builder: (_, controller) => Column(
+          children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(subtitle,
+                      style: const TextStyle(
+                          color: Colors.grey, fontSize: 13)),
+                  if (headerExtra != null) ...[
+                    const SizedBox(height: 12),
+                    headerExtra,
+                  ],
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            // Content
+            Expanded(
+              child: SingleChildScrollView(
+                controller: controller,
+                padding: const EdgeInsets.all(16),
+                child: child,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// ================= FIXED SALES SPOTS =================
   List<FlSpot> salesSpots(List<Order> orders) {
     final now = DateTime.now();
@@ -349,19 +593,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           title: 'Dead Products',
                           subtitle: 'Stock available but never sold',
                           color: AdminColors.danger,
+                          onTap: () => _showDeadProducts(products, orders),
                         ),
                         const Divider(),
                         _AnalyticsRow(
                           title: 'Low Stock Products',
-                          subtitle:
-                              'Items ≤ 5 (${lowStockCount(products)})',
+                          subtitle: 'Items ≤ 5 (${lowStockCount(products)})',
                           color: AdminColors.warning,
+                          onTap: () => _showLowStockProducts(products),
                         ),
                         const Divider(),
                         _AnalyticsRow(
                           title: 'Pending Payments',
-                          subtitle: 'COD orders not yet collected',
+                          subtitle: 'COD orders not yet deposited',
                           color: AdminColors.danger,
+                          onTap: () => _showPendingPayments(orders),
                         ),
                       ],
                     ),
@@ -461,40 +707,73 @@ class _AnalyticsRow extends StatelessWidget {
   final String title;
   final String subtitle;
   final Color color;
+  final VoidCallback onTap;
 
   const _AnalyticsRow({
     required this.title,
     required this.subtitle,
     required this.color,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title,
-                  style:
-                      const TextStyle(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 4),
-              Text(subtitle,
-                  style: const TextStyle(
-                      color: Colors.grey, fontSize: 13)),
-            ],
-          ),
-          Text(
-            'View',
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.w600,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
+                  Text(subtitle,
+                      style: const TextStyle(
+                          color: Colors.grey, fontSize: 13)),
+                ],
+              ),
             ),
-          ),
-        ],
+            Row(
+              children: [
+                Text(
+                  'View',
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(Icons.chevron_right, color: color, size: 18),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// ================= EMPTY STATE =================
+class _EmptyState extends StatelessWidget {
+  final String message;
+  const _EmptyState({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Center(
+        child: Text(
+          message,
+          style: const TextStyle(color: Colors.grey, fontSize: 15),
+          textAlign: TextAlign.center,
+        ),
       ),
     );
   }
