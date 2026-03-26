@@ -8,37 +8,45 @@ import '../models/order_model.dart';
 import 'package:flutter/services.dart';
 
 class InvoiceGenerator {
-  // ===== STORE INFO — update these =====
   static const String storeName = "NATURAL FRUITS AND VEGETABLES";
   static const String storeAddress =
       "In front of MM college, Madam Mahal Station Road,\nWright Town, Jabalpur";
   static const String storePhone = "9109493750";
   static const String storeEmail = "naturalfruitveg25@gmail.com";
   static const String storeState = "23-Madhya Pradesh";
-  // =====================================
 
-  /// Call this to download invoice PDF
+  // ✅ FIXED — works on both Web and Mobile, no dart:html needed
   static Future<void> downloadInvoice(
       BuildContext context, Order order) async {
-    final pdf = await _buildPdf(order);
-    await Printing.sharePdf(
-      bytes: pdf,
-      filename:
-          'invoice_${order.id.substring(order.id.length - 6)}.pdf',
-    );
+    try {
+      final pdf = await _buildPdf(order);
+
+      await Printing.sharePdf(
+        bytes: pdf,
+        filename:
+            'invoice_${order.id.substring(order.id.length - 6)}.pdf',
+      );
+    } catch (e) {
+      debugPrint("❌ Invoice error: $e");
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to generate invoice: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   static Future<Uint8List> _buildPdf(Order order) async {
     final doc = pw.Document();
 
-    // Fonts
     final fontBold = pw.Font.timesBold();
     final fontNormal = pw.Font.times();
     final fontHelvetica = pw.Font.helvetica();
     final fontHelveticaBold = pw.Font.helveticaBold();
 
-    // Colors
-    const headerBg = PdfColor.fromInt(0xFF2E7D32); // dark green
+    const headerBg = PdfColor.fromInt(0xFF2E7D32);
     const lightGreen = PdfColor.fromInt(0xFFE8F5E9);
     const tableHeader = PdfColor.fromInt(0xFF1B5E20);
     const borderColor = PdfColor.fromInt(0xFFBDBDBD);
@@ -51,8 +59,15 @@ class InvoiceGenerator {
         DateFormat('dd-MM-yyyy').format(order.createdAt);
     final orderTime =
         DateFormat('hh:mm a').format(order.createdAt);
-    final logoBytes = await rootBundle.load('assets/best_logo.png');
-final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());   
+
+    // ✅ Safe logo loading — won't crash if asset missing
+    pw.MemoryImage? logoImage;
+    try {
+      final logoBytes = await rootBundle.load('assets/best_logo.png');
+      logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
+    } catch (e) {
+      debugPrint("Logo not found: $e");
+    }
 
     doc.addPage(
       pw.Page(
@@ -66,7 +81,6 @@ final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
               pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  // Store info
                   pw.Expanded(
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -74,55 +88,43 @@ final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
                         pw.Text(
                           storeName,
                           style: pw.TextStyle(
-                            font: fontBold,
-                            fontSize: 14,
-                            color: black,
-                          ),
+                              font: fontBold, fontSize: 14, color: black),
                         ),
                         pw.SizedBox(height: 4),
-                        pw.Text(
-                          storeAddress,
-                          style: pw.TextStyle(
-                              font: fontNormal, fontSize: 9),
-                        ),
-                        pw.Text(
-                          "Phone no.: $storePhone",
-                          style: pw.TextStyle(
-                              font: fontNormal, fontSize: 9),
-                        ),
-                        pw.Text(
-                          "Email: $storeEmail",
-                          style: pw.TextStyle(
-                              font: fontNormal, fontSize: 9),
-                        ),
-                        pw.Text(
-                          "State: $storeState",
-                          style: pw.TextStyle(
-                              font: fontNormal, fontSize: 9),
-                        ),
+                        pw.Text(storeAddress,
+                            style: pw.TextStyle(
+                                font: fontNormal, fontSize: 9)),
+                        pw.Text("Phone no.: $storePhone",
+                            style: pw.TextStyle(
+                                font: fontNormal, fontSize: 9)),
+                        pw.Text("Email: $storeEmail",
+                            style: pw.TextStyle(
+                                font: fontNormal, fontSize: 9)),
+                        pw.Text("State: $storeState",
+                            style: pw.TextStyle(
+                                font: fontNormal, fontSize: 9)),
                       ],
                     ),
                   ),
-                  // Logo circle
-                  pw.Container(
-                    width: 60,
-                    height: 60,
-                    decoration: pw.BoxDecoration(
-                      color: lightGreen,
-                      shape: pw.BoxShape.circle,
-                      border: pw.Border.all(
-                          color: headerBg, width: 2),
+                  // ✅ Logo only if loaded successfully
+                  if (logoImage != null)
+                    pw.Container(
+                      width: 60,
+                      height: 60,
+                      decoration: pw.BoxDecoration(
+                        color: lightGreen,
+                        shape: pw.BoxShape.circle,
+                        border:
+                            pw.Border.all(color: headerBg, width: 2),
+                      ),
+                      child: pw.ClipOval(
+                        child: pw.Padding(
+                          padding: const pw.EdgeInsets.all(6),
+                          child: pw.Image(logoImage,
+                              fit: pw.BoxFit.contain),
+                        ),
+                      ),
                     ),
-                    child: pw.ClipOval(
-  child: pw.Padding(
-    padding: const pw.EdgeInsets.all(6),
-    child: pw.Image(
-      logoImage,
-      fit: pw.BoxFit.contain,
-    ),
-  ),
-  ),
-),
                 ],
               ),
 
@@ -135,10 +137,7 @@ final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
                 child: pw.Text(
                   "Sale Order",
                   style: pw.TextStyle(
-                    font: fontBold,
-                    fontSize: 16,
-                    color: headerBg,
-                  ),
+                      font: fontBold, fontSize: 16, color: headerBg),
                 ),
               ),
 
@@ -148,7 +147,6 @@ final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
               pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  // Left: Order From
                   pw.Expanded(
                     child: pw.Container(
                       padding: const pw.EdgeInsets.all(10),
@@ -161,30 +159,22 @@ final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
                         crossAxisAlignment:
                             pw.CrossAxisAlignment.start,
                         children: [
-                          pw.Text(
-                            "Order From",
-                            style: pw.TextStyle(
-                                font: fontBold, fontSize: 10),
-                          ),
+                          pw.Text("Order From",
+                              style: pw.TextStyle(
+                                  font: fontBold, fontSize: 10)),
                           pw.SizedBox(height: 4),
+                          pw.Text(order.customerName,
+                              style: pw.TextStyle(
+                                  font: fontBold, fontSize: 10)),
                           pw.Text(
-                            order.customerName,
-                            style: pw.TextStyle(
-                                font: fontBold, fontSize: 10),
-                          ),
-                          pw.Text(
-                            order.paymentMethod.toUpperCase(),
-                            style: pw.TextStyle(
-                                font: fontNormal, fontSize: 9),
-                          ),
+                              order.paymentMethod.toUpperCase(),
+                              style: pw.TextStyle(
+                                  font: fontNormal, fontSize: 9)),
                         ],
                       ),
                     ),
                   ),
-
                   pw.SizedBox(width: 12),
-
-                  // Right: Order Details
                   pw.Expanded(
                     child: pw.Container(
                       padding: const pw.EdgeInsets.all(10),
@@ -197,33 +187,23 @@ final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
                         crossAxisAlignment:
                             pw.CrossAxisAlignment.end,
                         children: [
-                          pw.Text(
-                            "Order Details",
-                            style: pw.TextStyle(
-                                font: fontBold, fontSize: 10),
-                          ),
+                          pw.Text("Order Details",
+                              style: pw.TextStyle(
+                                  font: fontBold, fontSize: 10)),
                           pw.SizedBox(height: 4),
-                          pw.Text(
-                            "Order No.: $orderNumber",
-                            style: pw.TextStyle(
-                                font: fontNormal, fontSize: 9),
-                          ),
-                          pw.Text(
-                            "Date: $orderDate",
-                            style: pw.TextStyle(
-                                font: fontNormal, fontSize: 9),
-                          ),
-                          pw.Text(
-                            "Time: $orderTime",
-                            style: pw.TextStyle(
-                                font: fontNormal, fontSize: 9),
-                          ),
-                          pw.Text(
-                            "Due Date: $orderDate",
-                            style: pw.TextStyle(
-                                font: fontHelveticaBold,
-                                fontSize: 9),
-                          ),
+                          pw.Text("Order No.: $orderNumber",
+                              style: pw.TextStyle(
+                                  font: fontNormal, fontSize: 9)),
+                          pw.Text("Date: $orderDate",
+                              style: pw.TextStyle(
+                                  font: fontNormal, fontSize: 9)),
+                          pw.Text("Time: $orderTime",
+                              style: pw.TextStyle(
+                                  font: fontNormal, fontSize: 9)),
+                          pw.Text("Due Date: $orderDate",
+                              style: pw.TextStyle(
+                                  font: fontHelveticaBold,
+                                  fontSize: 9)),
                         ],
                       ),
                     ),
@@ -246,52 +226,42 @@ final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
                   5: const pw.FixedColumnWidth(65),
                 },
                 children: [
-                  // Table header
                   pw.TableRow(
                     decoration:
                         pw.BoxDecoration(color: tableHeader),
                     children: [
                       _tableCell("#", fontHelveticaBold,
                           color: white, center: true),
-                      _tableCell(
-                          "Item Name", fontHelveticaBold,
+                      _tableCell("Item Name", fontHelveticaBold,
                           color: white),
                       _tableCell("Quantity", fontHelveticaBold,
                           color: white, center: true),
                       _tableCell("Unit", fontHelveticaBold,
                           color: white, center: true),
-                      _tableCell(
-                          "Price/ Unit", fontHelveticaBold,
+                      _tableCell("Price/ Unit", fontHelveticaBold,
                           color: white, center: true),
                       _tableCell("Amount", fontHelveticaBold,
                           color: white, center: true),
                     ],
                   ),
-
-                  // Item rows
                   ...order.items.asMap().entries.map((entry) {
                     final i = entry.key;
                     final item = entry.value;
                     final amount = item.price * item.quantity;
                     final isEven = i % 2 == 0;
-
                     return pw.TableRow(
                       decoration: pw.BoxDecoration(
-                        color: isEven
-                            ? PdfColors.white
-                            : lightGreen,
+                        color:
+                            isEven ? PdfColors.white : lightGreen,
                       ),
                       children: [
-                        _tableCell(
-                            '${i + 1}', fontHelvetica,
+                        _tableCell('${i + 1}', fontHelvetica,
                             center: true, fontSize: 9),
                         _tableCell(item.name, fontHelvetica,
                             fontSize: 9),
                         _tableCell(
-                            item.quantity.toString(),
-                            fontHelvetica,
-                            center: true,
-                            fontSize: 9),
+                            item.quantity.toString(), fontHelvetica,
+                            center: true, fontSize: 9),
                         _tableCell("Kg", fontHelvetica,
                             center: true, fontSize: 9),
                         _tableCell(
@@ -307,8 +277,6 @@ final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
                       ],
                     );
                   }).toList(),
-
-                  // Total row
                   pw.TableRow(
                     decoration:
                         pw.BoxDecoration(color: lightGreen),
@@ -316,11 +284,9 @@ final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
                       _tableCell("", fontHelveticaBold),
                       _tableCell("Total", fontHelveticaBold,
                           fontSize: 10),
-                      _tableCell(
-                          order.items.length.toString(),
+                      _tableCell(order.items.length.toString(),
                           fontHelveticaBold,
-                          center: true,
-                          fontSize: 10),
+                          center: true, fontSize: 10),
                       _tableCell("", fontHelveticaBold),
                       _tableCell("", fontHelveticaBold),
                       _tableCell(
@@ -339,42 +305,31 @@ final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
               pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  // Left: Amount in words + Terms
                   pw.Expanded(
                     child: pw.Column(
                       crossAxisAlignment:
                           pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text(
-                          "Order Amount In Words",
-                          style: pw.TextStyle(
-                              font: fontBold, fontSize: 9),
-                        ),
+                        pw.Text("Order Amount In Words",
+                            style: pw.TextStyle(
+                                font: fontBold, fontSize: 9)),
                         pw.SizedBox(height: 4),
-                        pw.Text(
-                          _amountInWords(order.grandTotal),
-                          style: pw.TextStyle(
-                              font: fontNormal, fontSize: 9),
-                        ),
+                        pw.Text(_amountInWords(order.grandTotal),
+                            style: pw.TextStyle(
+                                font: fontNormal, fontSize: 9)),
                         pw.SizedBox(height: 12),
-                        pw.Text(
-                          "Terms And Conditions",
-                          style: pw.TextStyle(
-                              font: fontBold, fontSize: 9),
-                        ),
+                        pw.Text("Terms And Conditions",
+                            style: pw.TextStyle(
+                                font: fontBold, fontSize: 9)),
                         pw.SizedBox(height: 4),
                         pw.Text(
-                          "Thank you for doing business with us.",
-                          style: pw.TextStyle(
-                              font: fontNormal, fontSize: 9),
-                        ),
+                            "Thank you for doing business with us.",
+                            style: pw.TextStyle(
+                                font: fontNormal, fontSize: 9)),
                       ],
                     ),
                   ),
-
                   pw.SizedBox(width: 12),
-
-                  // Right: Summary table
                   pw.Expanded(
                     child: pw.Table(
                       border: pw.TableBorder.all(
@@ -424,26 +379,21 @@ final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
                 mainAxisAlignment:
                     pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text(
-                    "For: $storeName",
-                    style: pw.TextStyle(
-                        font: fontBold, fontSize: 9),
-                  ),
+                  pw.Text("For: $storeName",
+                      style: pw.TextStyle(
+                          font: fontBold, fontSize: 9)),
                   pw.Column(
                     crossAxisAlignment:
                         pw.CrossAxisAlignment.center,
                     children: [
                       pw.SizedBox(height: 20),
-                      pw.Text(
-                        "Authorized Signatory",
-                        style: pw.TextStyle(
-                            font: fontBold, fontSize: 9),
-                      ),
+                      pw.Text("Authorized Signatory",
+                          style: pw.TextStyle(
+                              font: fontBold, fontSize: 9)),
                     ],
                   ),
                 ],
               ),
-
               pw.SizedBox(height: 8),
               pw.Center(
                 child: pw.Text(
@@ -465,13 +415,10 @@ final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
 
   // ===== HELPERS =====
 
-  static pw.Widget _tableCell(
-    String text,
-    pw.Font font, {
-    PdfColor color = PdfColors.black,
-    bool center = false,
-    double fontSize = 10,
-  }) {
+  static pw.Widget _tableCell(String text, pw.Font font,
+      {PdfColor color = PdfColors.black,
+      bool center = false,
+      double fontSize = 10}) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(
           horizontal: 6, vertical: 5),
@@ -479,35 +426,33 @@ final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
         text,
         textAlign:
             center ? pw.TextAlign.center : pw.TextAlign.left,
-        style: pw.TextStyle(
-            font: font, fontSize: fontSize, color: color),
+        style:
+            pw.TextStyle(font: font, fontSize: fontSize, color: color),
       ),
     );
   }
 
   static pw.TableRow _summaryRow(
       String label, String value, pw.Font font) {
-    return pw.TableRow(
-      children: [
-        pw.Padding(
-          padding: const pw.EdgeInsets.symmetric(
-              horizontal: 6, vertical: 4),
-          child: pw.Text(label,
-              style: pw.TextStyle(font: font, fontSize: 9)),
-        ),
-        pw.Padding(
-          padding: const pw.EdgeInsets.symmetric(
-              horizontal: 6, vertical: 4),
-          child: pw.Text(value,
-              textAlign: pw.TextAlign.right,
-              style: pw.TextStyle(font: font, fontSize: 9)),
-        ),
-      ],
-    );
+    return pw.TableRow(children: [
+      pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(
+            horizontal: 6, vertical: 4),
+        child: pw.Text(label,
+            style: pw.TextStyle(font: font, fontSize: 9)),
+      ),
+      pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(
+            horizontal: 6, vertical: 4),
+        child: pw.Text(value,
+            textAlign: pw.TextAlign.right,
+            style: pw.TextStyle(font: font, fontSize: 9)),
+      ),
+    ]);
   }
 
-  static pw.TableRow _summaryRowHighlight(String label,
-      String value, pw.Font font, PdfColor bg) {
+  static pw.TableRow _summaryRowHighlight(
+      String label, String value, pw.Font font, PdfColor bg) {
     return pw.TableRow(
       decoration: pw.BoxDecoration(color: bg),
       children: [
@@ -516,9 +461,7 @@ final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
               horizontal: 6, vertical: 4),
           child: pw.Text(label,
               style: pw.TextStyle(
-                  font: font,
-                  fontSize: 9,
-                  color: PdfColors.white)),
+                  font: font, fontSize: 9, color: PdfColors.white)),
         ),
         pw.Padding(
           padding: const pw.EdgeInsets.symmetric(
@@ -526,9 +469,7 @@ final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
           child: pw.Text(value,
               textAlign: pw.TextAlign.right,
               style: pw.TextStyle(
-                  font: font,
-                  fontSize: 9,
-                  color: PdfColors.white)),
+                  font: font, fontSize: 9, color: PdfColors.white)),
         ),
       ],
     );
@@ -536,40 +477,11 @@ final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
 
   static String _amountInWords(double amount) {
     final int rupees = amount.toInt();
-    final ones = [
-      '',
-      'One',
-      'Two',
-      'Three',
-      'Four',
-      'Five',
-      'Six',
-      'Seven',
-      'Eight',
-      'Nine',
-      'Ten',
-      'Eleven',
-      'Twelve',
-      'Thirteen',
-      'Fourteen',
-      'Fifteen',
-      'Sixteen',
-      'Seventeen',
-      'Eighteen',
-      'Nineteen'
-    ];
-    final tens = [
-      '',
-      '',
-      'Twenty',
-      'Thirty',
-      'Forty',
-      'Fifty',
-      'Sixty',
-      'Seventy',
-      'Eighty',
-      'Ninety'
-    ];
+    final ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six',
+      'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen',
+      'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    final tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty',
+      'Sixty', 'Seventy', 'Eighty', 'Ninety'];
 
     String convert(int n) {
       if (n == 0) return '';
@@ -586,7 +498,6 @@ final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
       return '${convert(n ~/ 10000000)} Crore${n % 10000000 != 0 ? ' ${convert(n % 10000000)}' : ''}';
     }
 
-    final words = convert(rupees);
-    return '$words Rupees Only';
+    return '${convert(rupees)} Rupees Only';
   }
 }
