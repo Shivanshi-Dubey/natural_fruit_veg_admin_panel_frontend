@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-
-import '../layouts/admin_layout.dart';
-import '../providers/expense_provider.dart';
-import 'add_expense_screen.dart';
-
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class ExpensesScreen extends StatefulWidget {
   const ExpensesScreen({super.key});
@@ -14,41 +10,68 @@ class ExpensesScreen extends StatefulWidget {
 }
 
 class _ExpensesScreenState extends State<ExpensesScreen> {
+  double handling = 0;
+  double delivery = 0;
+  double total = 0;
+  int orders = 0;
+
   @override
   void initState() {
     super.initState();
-    Future.microtask(() =>
-        context.read<ExpenseProvider>().fetchExpenses());
+    fetchExpenses();
+  }
+
+  Future<void> fetchExpenses() async {
+    final res = await http.get(
+      Uri.parse("https://naturalfruitveg.com/api/admin/expenses/today"),
+    );
+
+    final data = jsonDecode(res.body);
+
+    setState(() {
+      handling = data['handlingTotal'];
+      delivery = data['deliveryTotal'];
+      total = data['totalProfit'];
+      orders = data['totalOrders'];
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<ExpenseProvider>();
+    return Scaffold(
+      appBar: AppBar(title: const Text("Today's Earnings")),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
 
-    return AdminLayout(
-      title: 'Expenses',
-      child: provider.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(24),
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('Title')),
-                  DataColumn(label: Text('Category')),
-                  DataColumn(label: Text('Amount')),
-                  DataColumn(label: Text('Date')),
-                ],
-                rows: provider.expenses.map((e) {
-                  return DataRow(cells: [
-                    DataCell(Text(e.title)),
-                    DataCell(Text(e.category.toUpperCase())),
-                    DataCell(Text('₹${e.amount}')),
-                    DataCell(Text(
-                        e.date.toString().substring(0, 10))),
-                  ]);
-                }).toList(),
-              ),
-            ),
+            _card("Handling Charges", handling, Colors.blue),
+            _card("Delivery Charges", delivery, Colors.orange),
+            _card("Total Profit", total, Colors.green),
+
+            const SizedBox(height: 20),
+
+            Text("Orders Today: $orders"),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _card(String title, double amount, Color color) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        leading: Icon(Icons.currency_rupee, color: color),
+        title: Text(title),
+        trailing: Text(
+          "₹${amount.toStringAsFixed(0)}",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ),
     );
   }
 }
