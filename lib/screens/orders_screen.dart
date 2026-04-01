@@ -14,6 +14,7 @@ import '../models/order_model.dart';
 import '../models/delivery_boy.dart';
 import '../providers/order_provider.dart';
 import '../utils/invoice_generator.dart';
+import '../screens/create_order_screen.dart';
 
 class OrdersScreen extends StatefulWidget {
   final bool showOnlyPaid;
@@ -384,6 +385,32 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ),
 
                     const SizedBox(height: 30),
+
+                    // 🔥 CREATE ORDER BUTTON (ADD HERE)
+Row(
+  mainAxisAlignment: MainAxisAlignment.end,
+  children: [
+    ElevatedButton.icon(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.green,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const CreateOrderScreen(),
+          ),
+        );
+      },
+      icon: const Icon(Icons.add),
+      label: const Text("Create Order"),
+    ),
+  ],
+),
+
+const SizedBox(height: 20),
+
 
                     // ORDERS LIST
                     if (orders.isEmpty)

@@ -27,6 +27,7 @@ import '../screens/contra_voucher_screen.dart';
 import '../screens/contra_voucher_list_screen.dart';
 import '../screens/bank_reconciliation_screen.dart';
 import '../screens/party_reconciliation_screen.dart';
+import '../screens/salesinvoicescreen.dart';
 
 class AdminLayout extends StatelessWidget {
   final Widget child;
@@ -106,6 +107,12 @@ class AdminLayout extends StatelessWidget {
                       'Returns',
                       const ReturnsScreen(),
                     ),
+                    _menuItem(
+  context,
+  icon: Icons.receipt_long,
+  label: 'Sales Invoice',
+  screen: const SalesInvoiceScreen(),
+),
                   ],
                 ),
 
@@ -149,18 +156,35 @@ class AdminLayout extends StatelessWidget {
                       'Purchase Returns',
                       const PurchaseReturnsScreen(),
                     ),
-                    _subMenuItem(
-                      context,
-                      'GRN (Receipt)',
-                      const GrnScreen(purchaseInvoiceId: 'all'),
-                    ),
-                    _subMenuItem(
-                      context,
-                      'Expenses',
-                      const ExpensesScreen(),
-                    ),
                   ],
                 ),
+
+             _sectionTitle('Expenses'),
+
+_expandableSection(
+  icon: Icons.analytics,
+  title: 'Expenses',
+  children: [
+
+    _subMenuItem(
+      context,
+      'Today Earnings',
+      const ExpensesScreen(), // 👈 your screen
+    ),
+
+    _subMenuItem(
+      context,
+      'Handling Charges',
+     const SizedBox(), // optional separate
+    ),
+
+    _subMenuItem(
+      context,
+      'Delivery Charges',
+     const SizedBox(), // optional separate
+    ),
+  ],
+),
 
                 // ================= DELIVERY =================   ✅ NEW SECTION
                 _sectionTitle('Delivery'),
@@ -198,11 +222,7 @@ class AdminLayout extends StatelessWidget {
                     _subSectionTitle('Cash / Bank'),
                     _subMenuItem(context, 'Contra Voucher', const ContraVoucherScreen()),
                     _subMenuItem(context, 'Contra Voucher List', const ContraVoucherListScreen()),
-
-                    _subSectionTitle('Reconciliation'),
-                    _subMenuItem(context, 'Bank Reconciliation', const BankReconciliationScreen()),
-                    _subMenuItem(context, 'Party Reconciliation', const PartyReconciliationScreen()),
-                  ],
+                  ]
                 ),
 
                 // ================= CUSTOMERS =================
