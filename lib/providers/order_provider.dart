@@ -54,6 +54,26 @@ class OrderProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> createOrder(Map<String, dynamic> orderData) async {
+  try {
+    final res = await http.post(
+      Uri.parse(baseUrl), // already defined
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode(orderData),
+    );
+
+    if (res.statusCode == 200 || res.statusCode == 201) {
+      await fetchOrders(); // refresh list
+    } else {
+      _errorMessage = "Failed to create order";
+      notifyListeners();
+    }
+  } catch (e) {
+    _errorMessage = "Create order error: $e";
+    notifyListeners();
+  }
+}
+
   /// ================= AUTO REFRESH =================
   void startAutoRefresh() {
     _autoRefreshTimer?.cancel();
@@ -111,6 +131,8 @@ class OrderProvider with ChangeNotifier {
     }
   }
 
+
+
   /// ================= ASSIGN DELIVERY BOY =================
   Future<void> assignDeliveryBoy(
       String orderId, String deliveryBoyId) async {
@@ -152,6 +174,11 @@ class OrderProvider with ChangeNotifier {
       debugPrint("Return update error: $e");
     }
   }
+
+ void addOrder(Order order) {
+  _orders.insert(0, order); 
+  notifyListeners();
+}
 
   /// ================= CLEAR ERROR =================
   void clearError() {
