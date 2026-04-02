@@ -4,7 +4,8 @@ import 'package:flutter/foundation.dart';
 class Product {
   final String id;
   final String name;
-
+   final double buyPrice;
+  final double sellPrice;
   // ✅ Subtitle / Variety / Description
   final String description;
 
@@ -23,6 +24,8 @@ class Product {
   const Product({
     required this.id,
     required this.name,
+  this.buyPrice = 0.0,
+this.sellPrice = 0.0,
     this.description = '', // ✅ SAFE DEFAULT
     required this.price,
     required this.mrp,

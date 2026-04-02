@@ -35,6 +35,32 @@ class PurchaseInvoiceProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> addToInventory(String invoiceId) async {
+  try {
+    isLoading = true;
+    notifyListeners();
+
+    final res = await http.post(
+      Uri.parse(
+        'https://naturalfruitveg.com/api/admin/purchase-invoices/add-to-inventory/$invoiceId',
+      ),
+    );
+
+    print("ADD INVENTORY RESPONSE: ${res.body}");
+
+    if (res.statusCode == 200) {
+      await fetchInvoices(); // refresh UI
+    } else {
+      error = "Failed to add to inventory";
+    }
+  } catch (e) {
+    error = e.toString();
+  } finally {
+    isLoading = false;
+    notifyListeners();
+  }
+}
+
   Future<bool> createInvoice({
   required String invoiceNumber,
   required String supplierName,
