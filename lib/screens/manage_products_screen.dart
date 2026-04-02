@@ -10,8 +10,7 @@ class ManageProductsScreen extends StatefulWidget {
   const ManageProductsScreen({super.key});
 
   @override
-  State<ManageProductsScreen> createState() =>
-      _ManageProductsScreenState();
+  State<ManageProductsScreen> createState() => _ManageProductsScreenState();
 }
 
 class _ManageProductsScreenState extends State<ManageProductsScreen> {
@@ -33,14 +32,11 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
 
   void _onSearch(String query) {
     final products = context.read<ProductProvider>().products;
-
     if (query.isEmpty) {
       setState(() => _filteredProducts = products);
       return;
     }
-
     final q = query.toLowerCase();
-
     setState(() {
       _filteredProducts = products.where((p) {
         return p.name.toLowerCase().contains(q) ||
@@ -55,10 +51,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
 
     return AdminLayout(
       title: 'Products',
-
-      /// 🔍 CONNECT GLOBAL SEARCH
       onSearch: _onSearch,
-
       child: provider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : provider.errorMessage != null
@@ -68,10 +61,10 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ================= HEADER =================
+
+                      // ── Header ──────────────────────────────────────
                       Row(
-                        mainAxisAlignment:
-                            MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text(
                             'Product Inventory',
@@ -90,8 +83,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                   builder: (_) => AdminLayout(
                                     title: 'Add Product',
                                     showBack: true,
-                                    child:
-                                        const AddProductScreen(),
+                                    child: const AddProductScreen(),
                                   ),
                                 ),
                               );
@@ -102,22 +94,16 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
 
                       const SizedBox(height: 16),
 
-                      // ================= TABLE =================
+                      // ── Table ────────────────────────────────────────
                       Expanded(
                         child: Container(
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            border: Border.all(
-                                color:
-                                    const Color(0xFFE5E7EB)),
-                            borderRadius:
-                                BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFE5E7EB)),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                           child: _filteredProducts.isEmpty
-                              ? const Center(
-                                  child:
-                                      Text('No products found'),
-                                )
+                              ? const Center(child: Text('No products found'))
                               : SingleChildScrollView(
                                   child: DataTable(
                                     columnSpacing: 24,
@@ -126,172 +112,247 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                       const Color(0xFFF9FAFB),
                                     ),
                                     columns: const [
-                                      DataColumn(
-                                          label:
-                                              Text('Product')),
-                                      DataColumn(
-                                          label:
-                                              Text('Price')),
-                                      DataColumn(
-                                          label:
-                                              Text('Stock')),
-                                      DataColumn(
-                                          label:
-                                              Text('Status')),
-                                      DataColumn(
-                                          label:
-                                              Text('Actions')),
+                                      DataColumn(label: Text('Product')),
+                                      DataColumn(label: Text('Price')),
+                                      DataColumn(label: Text('Stock')),
+                                      DataColumn(label: Text('Status')),
+                                      DataColumn(label: Text('Actions')),
                                     ],
-                                    rows: _filteredProducts
-                                        .map((product) {
-                                      final bool inStock =
-                                          product.stock > 0;
+                                    rows: _filteredProducts.map((product) {
+                                      final bool inStock = product.stock > 0;
 
                                       return DataRow(
                                         cells: [
+
+                                          // ── Product ──────────────────
                                           DataCell(
                                             Row(
                                               children: [
-                                                Image.network(
-                                                  product.imagePath
-                                                          .isNotEmpty
-                                                      ? product
-                                                          .imagePath
-                                                      : 'https://via.placeholder.com/40',
-                                                  width: 40,
-                                                  height: 40,
-                                                  fit:
-                                                      BoxFit.cover,
+                                                ClipRRect(
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
+                                                  child: Image.network(
+                                                    product.imagePath.isNotEmpty
+                                                        ? product.imagePath
+                                                        : 'https://via.placeholder.com/40',
+                                                    width: 40,
+                                                    height: 40,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (_, __, ___) =>
+                                                        Container(
+                                                      width: 40,
+                                                      height: 40,
+                                                      color: Colors.grey.shade100,
+                                                      child: const Icon(
+                                                          Icons.image_outlined,
+                                                          size: 20,
+                                                          color: Colors.grey),
+                                                    ),
+                                                  ),
                                                 ),
-                                                const SizedBox(
-                                                    width:
-                                                        12),
+                                                const SizedBox(width: 12),
                                                 Column(
                                                   crossAxisAlignment:
-                                                      CrossAxisAlignment
-                                                          .start,
+                                                      CrossAxisAlignment.start,
                                                   mainAxisAlignment:
-                                                      MainAxisAlignment
-                                                          .center,
+                                                      MainAxisAlignment.center,
                                                   children: [
                                                     Text(
-                                                      product
-                                                          .name,
+                                                      product.name,
                                                       style: const TextStyle(
                                                           fontWeight:
-                                                              FontWeight
-                                                                  .w600),
+                                                              FontWeight.w600),
                                                     ),
                                                     Text(
-                                                      product
-                                                          .category,
+                                                      product.category,
                                                       style: const TextStyle(
-                                                          fontSize:
-                                                              12,
-                                                          color: Colors
-                                                              .grey),
+                                                          fontSize: 12,
+                                                          color: Colors.grey),
                                                     ),
                                                   ],
                                                 ),
                                               ],
                                             ),
                                           ),
+
+                                          // ── Price ────────────────────
                                           DataCell(
                                             Text(
                                               '₹${product.price.toStringAsFixed(0)}',
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.w600),
                                             ),
                                           ),
+
+                                          // ── Stock ────────────────────
                                           DataCell(
-                                            Text(product.stock
-                                                .toString()),
+                                            Text(
+                                              product.stock.toString(),
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                color: inStock
+                                                    ? Colors.black87
+                                                    : Colors.red,
+                                              ),
+                                            ),
                                           ),
+
+                                          // ── Status Badge ─────────────
                                           DataCell(
                                             Container(
                                               padding:
-                                                  const EdgeInsets
-                                                      .symmetric(
-                                                          horizontal:
-                                                              8,
-                                                          vertical:
-                                                              4),
-                                              decoration:
-                                                  BoxDecoration(
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4),
+                                              decoration: BoxDecoration(
                                                 color: inStock
                                                     ? Colors.green
-                                                        .withOpacity(
-                                                            0.1)
+                                                        .withOpacity(0.1)
                                                     : Colors.red
-                                                        .withOpacity(
-                                                            0.1),
+                                                        .withOpacity(0.1),
                                                 borderRadius:
-                                                    BorderRadius
-                                                        .circular(
-                                                            4),
+                                                    BorderRadius.circular(4),
                                               ),
                                               child: Text(
                                                 inStock
                                                     ? 'Active'
-                                                    : 'Out of stock',
+                                                    : 'Out of Stock',
                                                 style: TextStyle(
                                                   color: inStock
                                                       ? Colors.green
                                                       : Colors.red,
-                                                  fontSize:
-                                                      12,
-                                                  fontWeight:
-                                                      FontWeight
-                                                          .w600,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
                                                 ),
                                               ),
                                             ),
                                           ),
+
+                                          // ── Actions ──────────────────
                                           DataCell(
                                             Row(
                                               children: [
+
+                                                // ✅ Mark OOS / Mark Active
+                                                GestureDetector(
+                                                  onTap: () async {
+                                                    final newStock =
+                                                        inStock ? 0 : 10;
+                                                    await provider
+                                                        .updateProductStock(
+                                                      product.id,
+                                                      newStock,
+                                                    );
+                                                    _resetFilter();
+                                                  },
+                                                  child: Container(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                            horizontal: 8,
+                                                            vertical: 5),
+                                                    decoration: BoxDecoration(
+                                                      color: inStock
+                                                          ? Colors.orange.shade50
+                                                          : Colors.green.shade50,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              6),
+                                                      border: Border.all(
+                                                        color: inStock
+                                                            ? Colors
+                                                                .orange.shade300
+                                                            : Colors
+                                                                .green.shade300,
+                                                      ),
+                                                    ),
+                                                    child: Text(
+                                                      inStock
+                                                          ? 'Mark OOS'
+                                                          : 'Mark Active',
+                                                      style: TextStyle(
+                                                        fontSize: 11,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: inStock
+                                                            ? Colors
+                                                                .orange.shade700
+                                                            : Colors
+                                                                .green.shade700,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+
+                                                // Edit
                                                 IconButton(
-                                                  icon: const Icon(
-                                                      Icons.edit,
-                                                      size:
-                                                          18),
-                                                  onPressed:
-                                                      () {
-                                                    Navigator
-                                                        .push(
+                                                  icon: const Icon(Icons.edit,
+                                                      size: 18),
+                                                  onPressed: () {
+                                                    Navigator.push(
                                                       context,
                                                       MaterialPageRoute(
-                                                        builder:
-                                                            (_) =>
-                                                                AdminLayout(
-                                                          title:
-                                                              'Edit Product',
-                                                          showBack:
-                                                              true,
+                                                        builder: (_) =>
+                                                            AdminLayout(
+                                                          title: 'Edit Product',
+                                                          showBack: true,
                                                           child:
                                                               AddProductScreen(
-                                                            product:
-                                                                product,
+                                                            product: product,
                                                           ),
                                                         ),
                                                       ),
                                                     );
                                                   },
                                                 ),
+
+                                                // Delete
                                                 IconButton(
                                                   icon: const Icon(
-                                                    Icons
-                                                        .delete,
+                                                    Icons.delete,
                                                     size: 18,
-                                                    color:
-                                                        Colors.red,
+                                                    color: Colors.red,
                                                   ),
-                                                  onPressed:
-                                                      () async {
-                                                    await provider
-                                                        .deleteProduct(
-                                                      product.id,
-                                                      context,
+                                                  onPressed: () async {
+                                                    final confirm =
+                                                        await showDialog<bool>(
+                                                      context: context,
+                                                      builder: (_) =>
+                                                          AlertDialog(
+                                                        title: const Text(
+                                                            'Delete Product'),
+                                                        content: Text(
+                                                            'Are you sure you want to delete "${product.name}"?'),
+                                                        actions: [
+                                                          TextButton(
+                                                            onPressed: () =>
+                                                                Navigator.pop(
+                                                                    context,
+                                                                    false),
+                                                            child: const Text(
+                                                                'Cancel'),
+                                                          ),
+                                                          TextButton(
+                                                            onPressed: () =>
+                                                                Navigator.pop(
+                                                                    context,
+                                                                    true),
+                                                            child: const Text(
+                                                                'Delete',
+                                                                style: TextStyle(
+                                                                    color: Colors
+                                                                        .red)),
+                                                          ),
+                                                        ],
+                                                      ),
                                                     );
-                                                    _resetFilter();
+                                                    if (confirm == true) {
+                                                      await provider
+                                                          .deleteProduct(
+                                                        product.id,
+                                                        context,
+                                                      );
+                                                      _resetFilter();
+                                                    }
                                                   },
                                                 ),
                                               ],

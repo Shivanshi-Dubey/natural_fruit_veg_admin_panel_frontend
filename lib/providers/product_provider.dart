@@ -126,6 +126,23 @@ class ProductProvider with ChangeNotifier {
     }
   }
 
+
+Future<void> updateProductStock(String productId, int newStock) async {
+  try {
+    final response = await http.put(
+      Uri.parse("https://naturalfruitveg.com/api/products/$productId"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"stock": newStock}),
+    );
+    if (response.statusCode == 200) {
+      await fetchProducts();
+    } else {
+      debugPrint("Stock update failed: ${response.statusCode}");
+    }
+  } catch (e) {
+    debugPrint("Stock update error: $e");
+  }
+}
   /* =========================
      🗑 DELETE PRODUCT
   ========================= */
