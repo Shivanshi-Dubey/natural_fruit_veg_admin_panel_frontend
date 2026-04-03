@@ -29,6 +29,8 @@ import '../screens/bank_reconciliation_screen.dart';
 import '../screens/party_reconciliation_screen.dart';
 import '../screens/salesinvoicescreen.dart';
 import '../screens/sales_list_screen.dart';
+import '../screens/delivery_charges_screen.dart';
+import '../screens/handling_charges_screen.dart';
 
 // ✅ NEW — Features 20-23
 import '../screens/delivery_payments_screen.dart';
@@ -202,12 +204,12 @@ class AdminLayout extends StatelessWidget {
                     _subMenuItem(
                       context,
                       'Handling Charges',
-                      const SizedBox(),
+                      const HandlingChargesScreen(),
                     ),
                     _subMenuItem(
                       context,
                       'Delivery Charges',
-                      const SizedBox(),
+                      const DeliveryChargesScreen(),
                     ),
                   ],
                 ),
