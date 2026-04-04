@@ -16,6 +16,8 @@ import 'screens/manage_products_screen.dart';
 import 'screens/orders_screen.dart';
 import 'screens/add_product_screen.dart';
 import 'screens/dashboard_screen.dart';
+import 'screens/stock_management_screen.dart'; 
+import 'screens/sales_list_screen.dart';// ✅ moved to screens folder
 
 void main() {
   runApp(const AdminApp());
@@ -36,7 +38,6 @@ class AdminApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => GRNProvider()),
         ChangeNotifierProvider(create: (_) => PurchaseReturnProvider()),
         ChangeNotifierProvider(create: (_) => ExpenseProvider()),
-
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, theme, _) {
@@ -57,12 +58,11 @@ class AdminApp extends StatelessWidget {
 
             routes: {
               '/dashboard': (context) => const DashboardScreen(),
-              '/manage-products': (context) =>
-                  const ManageProductsScreen(),
-              '/orders': (context) =>
-                  const OrdersScreen(),
-              '/add-product': (context) =>
-                  const AddProductScreen(),
+              '/manage-products': (context) => const ManageProductsScreen(),
+              '/orders': (context) => const OrdersScreen(),
+              '/add-product': (context) => const AddProductScreen(),
+              '/stock-management': (context) => const StockManagementScreen(),
+              '/sale-list': (context) => const SalesListScreen(), // ✅ added
             },
           );
         },

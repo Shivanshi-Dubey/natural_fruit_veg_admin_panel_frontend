@@ -37,7 +37,6 @@ class _PurchaseInvoicesEntry {
 class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
   static const String baseUrl = "https://naturalfruitveg.com/api";
 
-  // ✅ Replaced supplierController with dropdown state
   String? _selectedSupplierId;
   String? _selectedSupplierName;
 
@@ -54,8 +53,6 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     super.initState();
     _loadExistingProducts();
     _entries.add(_PurchaseInvoicesEntry());
-
-    // ✅ Fetch suppliers on load
     Future.microtask(() =>
         context.read<SupplierProvider>().fetchSuppliers());
   }
@@ -72,8 +69,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         setState(() {
-          existingProducts =
-              data is List ? data : (data['products'] ?? []);
+          existingProducts = data is List ? data : (data['products'] ?? []);
           loadingProducts = false;
         });
       }
@@ -96,7 +92,6 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
       _entries.fold(0, (sum, e) => sum + e.buyPrice * e.quantity);
 
   Future<void> _save() async {
-    // ✅ Validate supplier selected
     if (_selectedSupplierId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -126,14 +121,14 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     for (final entry in _entries) {
       try {
         if (entry.isExisting && entry.existingProductId != null) {
+          // ✅ TASK 1: Update existing product stock in backend
           final res = await http.put(
             Uri.parse("$baseUrl/products/${entry.existingProductId}"),
             headers: {"Content-Type": "application/json"},
             body: jsonEncode({
-              "stock": entry.quantity,
+              "addstock": entry.quantity,   // ✅ adds to existing stock
               "price": entry.sellPrice,
               "buyPrice": entry.buyPrice,
-              // ✅ Include supplier info
               "supplierId": _selectedSupplierId,
               "supplierName": _selectedSupplierName,
             }),
@@ -144,6 +139,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
             errors.add("Failed to update ${entry.name}");
           }
         } else {
+          // ✅ TASK 1: Create new product with initial stock
           final res = await http.post(
             Uri.parse("$baseUrl/products"),
             headers: {"Content-Type": "application/json"},
@@ -152,12 +148,11 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
               "price": entry.sellPrice,
               "mrp": entry.sellPrice,
               "buyPrice": entry.buyPrice,
-              "stock": entry.quantity,
+              "stock": entry.quantity,     // ✅ sets initial stock
               "unit": entry.unit,
               "category": "General",
               "imagePath": "",
               "description": "",
-              // ✅ Include supplier info
               "supplierId": _selectedSupplierId,
               "supplierName": _selectedSupplierName,
             }),
@@ -173,6 +168,33 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
       }
     }
 
+    // ✅ TASK 1: Save purchase record to purchases collection
+    try {
+      await http.post(
+        Uri.parse("$baseUrl/purchases"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "invoiceNumber": invoiceNumberController.text,
+          "supplierId": _selectedSupplierId,
+          "supplierName": _selectedSupplierName,
+          "date": DateFormat('yyyy-MM-dd').format(selectedDate),
+          "items": _entries
+              .map((e) => {
+                    "name": e.name,
+                    "quantity": e.quantity,
+                    "buyPrice": e.buyPrice,
+                    "sellPrice": e.sellPrice,
+                    "unit": e.unit,
+                    "productId": e.existingProductId,
+                  })
+              .toList(),
+          "totalAmount": grandTotal,
+        }),
+      );
+    } catch (_) {
+      // purchase record save failed — stock still updated
+    }
+
     setState(() => isSaving = false);
 
     if (!mounted) return;
@@ -180,8 +202,8 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     if (errors.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              Text("✅ $updated updated, $created created successfully"),
+          content: Text(
+              "✅ Stock updated! $updated products updated, $created new products added"),
           backgroundColor: Colors.green,
         ),
       );
@@ -196,6 +218,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     }
   }
 
+  // ✅ TASK 2: Product picker is now triggered by tapping product name field
   void _showProductPicker(int index) {
     showModalBottomSheet(
       context: context,
@@ -216,15 +239,28 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text("Select Existing Product",
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16)),
+                // Handle bar
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const Text("Select Product",
+                    style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 12),
                 TextField(
-                  decoration: const InputDecoration(
+                  autofocus: true,
+                  decoration: InputDecoration(
                     hintText: "Search product...",
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.search),
+                    border: const OutlineInputBorder(),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
                   ),
                   onChanged: (v) =>
                       setModalState(() => search = v.toLowerCase()),
@@ -234,36 +270,82 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                   height: 300,
                   child: ListView(
                     children: [
+                      // ✅ Create new product option
                       ListTile(
-                        leading:
-                            const Icon(Icons.add, color: Colors.green),
-                        title: const Text("Create New Product"),
+                        leading: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.add, color: Colors.green, size: 20),
+                        ),
+                        title: const Text("Create New Product",
+                            style: TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: const Text("Add a brand new product"),
                         onTap: () {
                           Navigator.pop(context);
                           setState(() {
                             _entries[index].isExisting = false;
                             _entries[index].existingProductId = null;
+                            _entries[index].name = '';
                           });
                         },
                       ),
                       const Divider(),
+                      // ✅ Existing products list
                       ...existingProducts
                           .where((p) => (p['name'] ?? '')
                               .toString()
                               .toLowerCase()
                               .contains(search))
                           .map((p) => ListTile(
+                                leading: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(Icons.inventory_2_outlined,
+                                      color: Colors.blue, size: 20),
+                                ),
                                 title: Text(p['name']?.toString() ?? ''),
-                                subtitle: Text(
-                                    "₹${p['price']} • Stock: ${p['stock'] ?? 0}"),
+                                subtitle: Row(
+                                  children: [
+                                    Text("Buy: ₹${p['buyPrice'] ?? 0}  •  Sell: ₹${p['price'] ?? 0}"),
+                                  ],
+                                ),
+                                trailing: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: (p['stock'] ?? 0) > 0
+                                        ? Colors.green.shade50
+                                        : Colors.red.shade50,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    "Stock: ${p['stock'] ?? 0}",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: (p['stock'] ?? 0) > 0
+                                          ? Colors.green.shade700
+                                          : Colors.red.shade700,
+                                    ),
+                                  ),
+                                ),
                                 onTap: () {
                                   Navigator.pop(context);
                                   setState(() {
                                     _entries[index].name =
                                         p['name']?.toString() ?? '';
                                     _entries[index].sellPrice =
-                                        (p['price'] as num?)?.toDouble() ??
-                                            0;
+                                        (p['price'] as num?)?.toDouble() ?? 0;
+                                    _entries[index].buyPrice =
+                                        (p['buyPrice'] as num?)?.toDouble() ?? 0;
+                                    _entries[index].unit =
+                                        p['unit']?.toString() ?? 'kg';
                                     _entries[index].isExisting = true;
                                     _entries[index].existingProductId =
                                         p['_id']?.toString();
@@ -295,19 +377,16 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
-                  // ── Invoice Header ─────────────────────────────
+                  // ── Invoice Header ──────────────────────────────
                   _sectionCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text("Invoice Details",
                             style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16)),
+                                fontWeight: FontWeight.bold, fontSize: 16)),
                         const SizedBox(height: 14),
 
-                        // Invoice Number
                         TextField(
                           controller: invoiceNumberController,
                           decoration: const InputDecoration(
@@ -319,7 +398,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
 
                         const SizedBox(height: 12),
 
-                        // ✅ Supplier Dropdown — replaces plain TextField
+                        // Supplier Dropdown
                         Consumer<SupplierProvider>(
                           builder: (context, supplierProvider, _) {
                             final suppliers = supplierProvider.suppliers;
@@ -329,12 +408,10 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                                 decoration: InputDecoration(
                                   labelText: 'Supplier',
                                   border: OutlineInputBorder(),
-                                  prefixIcon:
-                                      Icon(Icons.person_outline),
+                                  prefixIcon: Icon(Icons.person_outline),
                                 ),
                                 child: SizedBox(
                                   height: 20,
-                                  width: 20,
                                   child: Center(
                                     child: CircularProgressIndicator(
                                         strokeWidth: 2),
@@ -348,8 +425,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                                 decoration: const InputDecoration(
                                   labelText: 'Supplier',
                                   border: OutlineInputBorder(),
-                                  prefixIcon:
-                                      Icon(Icons.person_outline),
+                                  prefixIcon: Icon(Icons.person_outline),
                                 ),
                                 child: Text(
                                   'No suppliers found — add one first',
@@ -364,8 +440,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                               value: _selectedSupplierId,
                               decoration: const InputDecoration(
                                 labelText: 'Supplier Name',
-                                prefixIcon:
-                                    Icon(Icons.person_outline),
+                                prefixIcon: Icon(Icons.person_outline),
                                 border: OutlineInputBorder(),
                               ),
                               hint: const Text('Select Supplier'),
@@ -374,8 +449,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                                         value: s.id,
                                         child: Row(
                                           children: [
-                                            const Icon(
-                                                Icons.store_outlined,
+                                            const Icon(Icons.store_outlined,
                                                 size: 16,
                                                 color: Colors.grey),
                                             const SizedBox(width: 8),
@@ -401,8 +475,6 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                                       .name;
                                 });
                               },
-                              validator: (v) =>
-                                  v == null ? 'Please select a supplier' : null,
                             );
                           },
                         ),
@@ -419,8 +491,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                               border: OutlineInputBorder(),
                             ),
                             child: Text(
-                              DateFormat('dd MMM yyyy')
-                                  .format(selectedDate),
+                              DateFormat('dd MMM yyyy').format(selectedDate),
                               style: const TextStyle(fontSize: 15),
                             ),
                           ),
@@ -431,27 +502,24 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
 
                   const SizedBox(height: 16),
 
-                  // ── Items ──────────────────────────────────────
+                  // ── Items ───────────────────────────────────────
                   _sectionCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          mainAxisAlignment:
-                              MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text("Items",
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16)),
                             TextButton.icon(
-                              onPressed: () => setState(() =>
-                                  _entries.add(_PurchaseInvoicesEntry())),
-                              icon: const Icon(Icons.add,
-                                  color: Colors.green),
+                              onPressed: () => setState(
+                                  () => _entries.add(_PurchaseInvoicesEntry())),
+                              icon: const Icon(Icons.add, color: Colors.green),
                               label: const Text("Add Item",
-                                  style:
-                                      TextStyle(color: Colors.green)),
+                                  style: TextStyle(color: Colors.green)),
                             ),
                           ],
                         ),
@@ -467,15 +535,14 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
 
                   const SizedBox(height: 16),
 
-                  // ── Grand Total ────────────────────────────────
+                  // ── Grand Total ─────────────────────────────────
                   _sectionCard(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text("Total Purchase Amount",
                             style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15)),
+                                fontWeight: FontWeight.bold, fontSize: 15)),
                         Text(
                           "₹${grandTotal.toStringAsFixed(0)}",
                           style: const TextStyle(
@@ -487,7 +554,6 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                     ),
                   ),
 
-                  // ✅ Selected supplier summary
                   if (_selectedSupplierName != null) ...[
                     const SizedBox(height: 10),
                     Container(
@@ -496,8 +562,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                       decoration: BoxDecoration(
                         color: Colors.green.shade50,
                         borderRadius: BorderRadius.circular(8),
-                        border:
-                            Border.all(color: Colors.green.shade200),
+                        border: Border.all(color: Colors.green.shade200),
                       ),
                       child: Row(
                         children: [
@@ -519,7 +584,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
 
                   const SizedBox(height: 20),
 
-                  // ── Save Button ────────────────────────────────
+                  // ── Save Button ─────────────────────────────────
                   SizedBox(
                     width: double.infinity,
                     height: 52,
@@ -541,7 +606,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                             )
                           : const Icon(Icons.save_outlined),
                       label: Text(
-                        isSaving ? "Saving..." : "Save Invoice",
+                        isSaving ? "Saving..." : "Save Invoice & Update Stock",
                         style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold),
                       ),
@@ -570,37 +635,61 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
             children: [
               Expanded(
                 child: entry.isExisting
-                    ? InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: "Product",
-                          border: OutlineInputBorder(),
-                          isDense: true,
+                    // ✅ TASK 2: No "Pick" button — tap product chip to change
+                    ? GestureDetector(
+                        onTap: () => _showProductPicker(i),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.green.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.inventory_2_outlined,
+                                  size: 16, color: Colors.green),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  entry.name,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14),
+                                ),
+                              ),
+                              const Icon(Icons.edit_outlined,
+                                  size: 14, color: Colors.green),
+                            ],
+                          ),
                         ),
-                        child: Text(entry.name,
-                            style: const TextStyle(fontSize: 14)),
                       )
-                    : TextField(
-                        decoration: const InputDecoration(
-                          labelText: "Product Name",
-                          border: OutlineInputBorder(),
-                          isDense: true,
+                    // ✅ TASK 2: Tap text field to open product picker
+                    : GestureDetector(
+                        onTap: () => _showProductPicker(i),
+                        child: AbsorbPointer(
+                          child: TextField(
+                            decoration: InputDecoration(
+                              labelText: "Tap to select product",
+                              border: const OutlineInputBorder(),
+                              isDense: true,
+                              suffixIcon: const Icon(Icons.arrow_drop_down),
+                              filled: true,
+                              fillColor: Colors.grey.shade50,
+                            ),
+                            controller:
+                                TextEditingController(text: entry.name),
+                          ),
                         ),
-                        onChanged: (v) =>
-                            setState(() => entry.name = v),
                       ),
               ),
               const SizedBox(width: 8),
-              OutlinedButton(
-                onPressed: () => _showProductPicker(i),
-                child: const Text("Pick"),
-              ),
-              const SizedBox(width: 4),
+              // ✅ TASK 2: "Pick" button removed — delete button only
               if (_entries.length > 1)
                 IconButton(
-                  icon: const Icon(Icons.delete_outline,
-                      color: Colors.red),
-                  onPressed: () =>
-                      setState(() => _entries.removeAt(i)),
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  onPressed: () => setState(() => _entries.removeAt(i)),
                 ),
             ],
           ),
@@ -615,6 +704,10 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                     isDense: true,
                   ),
                   keyboardType: TextInputType.number,
+                  controller: TextEditingController(
+                      text: entry.buyPrice > 0
+                          ? entry.buyPrice.toString()
+                          : ''),
                   onChanged: (v) => setState(
                       () => entry.buyPrice = double.tryParse(v) ?? 0),
                 ),
@@ -645,6 +738,10 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                     isDense: true,
                   ),
                   keyboardType: TextInputType.number,
+                  controller: TextEditingController(
+                      text: entry.quantity > 0
+                          ? entry.quantity.toString()
+                          : ''),
                   onChanged: (v) => setState(
                       () => entry.quantity = int.tryParse(v) ?? 0),
                 ),
@@ -659,11 +756,10 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                 value: entry.unit,
                 isDense: true,
                 items: ['kg', 'g', 'pcs', 'dozen', 'ltr', 'box']
-                    .map((u) => DropdownMenuItem(
-                        value: u, child: Text(u)))
+                    .map((u) =>
+                        DropdownMenuItem(value: u, child: Text(u)))
                     .toList(),
-                onChanged: (v) =>
-                    setState(() => entry.unit = v ?? 'kg'),
+                onChanged: (v) => setState(() => entry.unit = v ?? 'kg'),
               ),
               Text(
                 "Subtotal: ₹${(entry.buyPrice * entry.quantity).toStringAsFixed(0)}",
