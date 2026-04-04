@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../layouts/admin_layout.dart';
+import 'package:provider/provider.dart';
+import '../providers/supplier_provider.dart';
+import '../models/supplier_model.dart';
 
 class AddSupplierScreen extends StatefulWidget {
   const AddSupplierScreen({super.key});
@@ -102,10 +105,10 @@ class _AddSupplierScreenState extends State<AddSupplierScreen> {
                     child: const Text('Cancel'),
                   ),
                   const SizedBox(width: 12),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.save),
-                    label: const Text('Save Supplier'),
-                    onPressed: _saveSupplier,
+                 ElevatedButton.icon(
+  icon: const Icon(Icons.save),
+  label: const Text('Save Supplier'),
+  onPressed: _saveSupplier, // ✅ already correct, no change needed
                   ),
                 ],
               ),
@@ -116,19 +119,23 @@ class _AddSupplierScreenState extends State<AddSupplierScreen> {
     );
   }
 
-  // ================= SAVE (UI ONLY) =================
-  void _saveSupplier() {
-    if (!_formKey.currentState!.validate()) return;
+// ================= SAVE — CONNECTED TO BACKEND =================
+Future<void> _saveSupplier() async {
+  if (!_formKey.currentState!.validate()) return;
 
-    // 🚧 Backend integration will come later
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Supplier saved (UI only)'),
-      ),
-    );
+  final supplier = Supplier(
+    id: '',
+    name: nameCtrl.text.trim(),
+    phone: phoneCtrl.text.trim(),
+    email: emailCtrl.text.trim(),
+    address: addressCtrl.text.trim(),
+    gstNumber: gstCtrl.text.trim(),
+    isActive: isActive,
+    createdAt: DateTime.now(), 
+  );
 
-    Navigator.pop(context);
-  }
+  await context.read<SupplierProvider>().addSupplier(supplier, context);
+}
 
   // ================= UI HELPERS =================
 
