@@ -342,6 +342,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ..sort((a, b) => a.x.compareTo(b.x));
   }
 
+  List<Map<String, dynamic>> _topSellingProducts(
+    List<Order> orders, List<Product> products) {
+  final Map<String, int> qtySold = {};
+
+  for (final order in orders) {
+    for (final item in order.items) {
+      qtySold[item.name] = (qtySold[item.name] ?? 0) + item.quantity;
+    }
+  }
+
+  final sorted = qtySold.entries.toList()
+    ..sort((a, b) => b.value.compareTo(a.value));
+
+  return sorted.take(5).map((e) => {
+    'name': e.key,
+    'qty': e.value,
+  }).toList();
+}
+
   /// ================= X AXIS DATE LABEL =================
   String _dayLabel(int index) {
     int days = 7;
@@ -401,6 +420,104 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
 
                   const SizedBox(height: 32),
+
+/// ================= TOP SELLING PRODUCTS =================
+const _SectionTitle('Top Selling Products'),
+const SizedBox(height: 12),
+
+Container(
+  decoration: _box(),
+  padding: const EdgeInsets.all(16),
+  child: _topSellingProducts(orders, products).isEmpty
+      ? const Padding(
+          padding: EdgeInsets.all(16),
+          child: Text('No sales data yet', style: TextStyle(color: Colors.grey)),
+        )
+      : Column(
+          children: _topSellingProducts(orders, products)
+              .asMap()
+              .entries
+              .map((entry) {
+            final i = entry.key;
+            final item = entry.value;
+            final colors = [
+              AdminColors.warning,
+              Colors.blueGrey,
+              Colors.brown,
+              AdminColors.success,
+              AdminColors.primary,
+            ];
+            final color = colors[i % colors.length];
+            final maxQty = _topSellingProducts(orders, products).first['qty'] as int;
+            final qty = item['qty'] as int;
+            final pct = maxQty > 0 ? qty / maxQty : 0.0;
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Row(
+                children: [
+                  // Rank badge
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: i < 3 ? color.withOpacity(0.15) : Colors.grey.shade100,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '#${i + 1}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: i < 3 ? color : Colors.grey,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Name + bar
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              item['name'] as String,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600, fontSize: 13),
+                            ),
+                            Text(
+                              '${item['qty']} sold',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                  fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: pct,
+                            backgroundColor: Colors.grey.shade100,
+                            color: color,
+                            minHeight: 6,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+),
+
+
 
                   /// ================= SALES OVERVIEW =================
                   Row(

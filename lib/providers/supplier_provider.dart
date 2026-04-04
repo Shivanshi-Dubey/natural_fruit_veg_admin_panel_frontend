@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../models/supplier_model.dart';
-import '../services/supplier_service.dart'; 
 
 class SupplierProvider extends ChangeNotifier {
   final String baseUrl = 'https://naturalfruitveg.com/api/admin/suppliers';
@@ -56,11 +55,16 @@ class SupplierProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteSupplier(String id) async {
+ Future<void> deleteSupplier(String id) async {
   try {
-    await SupplierService.deleteSupplier(id);
-    suppliers.removeWhere((s) => s.id == id);
-    notifyListeners();
+    final res = await http.delete(Uri.parse('$baseUrl/$id'));
+    if (res.statusCode == 200) {
+      suppliers.removeWhere((s) => s.id == id);
+      notifyListeners();
+    } else {
+      error = 'Failed to delete supplier';
+      notifyListeners();
+    }
   } catch (e) {
     error = 'Failed to delete supplier';
     notifyListeners();
