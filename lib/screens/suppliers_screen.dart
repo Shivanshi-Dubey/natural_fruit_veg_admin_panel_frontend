@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../layouts/admin_layout.dart';
 import '../providers/supplier_provider.dart';
 import 'add_supplier_screen.dart';
+import 'supplier_detail_screen.dart';
 
 class SuppliersScreen extends StatefulWidget {
   const SuppliersScreen({super.key});
@@ -193,13 +194,19 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
   /* =========================
      🧩 SUPPLIER CARD
   ========================= */
-  Widget _buildSupplierCard(dynamic s, SupplierProvider provider) {
+ Widget _buildSupplierCard(dynamic s, SupplierProvider provider) {
     final initials = s.name.length >= 2
         ? s.name.substring(0, 2).toUpperCase()
         : s.name.toUpperCase();
 
     return GestureDetector(
-      onTap: () => _showSupplierDetails(s, provider),
+      // ✅ Now navigates to SupplierDetailScreen instead of bottom sheet
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SupplierDetailScreen(supplier: s),
+        ),
+      ).then((_) => provider.fetchSuppliers()),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
@@ -209,75 +216,52 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
           border: Border.all(color: const Color(0xFFE5E7EB)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 6,
-            )
+                color: Colors.black.withOpacity(0.04), blurRadius: 6)
           ],
         ),
         child: Row(
           children: [
-            // Avatar
             CircleAvatar(
               radius: 24,
               backgroundColor:
                   const Color(0xFF2E7D32).withOpacity(0.1),
-              child: Text(
-                initials,
-                style: const TextStyle(
-                  color: Color(0xFF2E7D32),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
-              ),
+              child: Text(initials,
+                  style: const TextStyle(
+                      color: Color(0xFF2E7D32),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15)),
             ),
             const SizedBox(width: 14),
-
-            // Info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    s.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
+                  Text(s.name,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 15)),
                   const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.phone,
-                          size: 13, color: Colors.grey),
-                      const SizedBox(width: 4),
-                      Text(
-                        s.phone,
+                  Row(children: [
+                    const Icon(Icons.phone,
+                        size: 13, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(s.phone,
                         style: const TextStyle(
-                            color: Colors.grey, fontSize: 12),
-                      ),
-                    ],
-                  ),
+                            color: Colors.grey, fontSize: 12)),
+                  ]),
                   if (s.gstNumber.isNotEmpty) ...[
                     const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        const Icon(Icons.receipt_outlined,
-                            size: 13, color: Colors.grey),
-                        const SizedBox(width: 4),
-                        Text(
-                          "GST: ${s.gstNumber}",
+                    Row(children: [
+                      const Icon(Icons.receipt_outlined,
+                          size: 13, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Text("GST: ${s.gstNumber}",
                           style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 12),
-                        ),
-                      ],
-                    ),
+                              color: Colors.grey, fontSize: 12)),
+                    ]),
                   ],
                 ],
               ),
             ),
-
-            // Status + arrow
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -292,6 +276,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
       ),
     );
   }
+
 
   /* =========================
      📄 SUPPLIER DETAILS BOTTOM SHEET
