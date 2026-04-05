@@ -152,7 +152,7 @@ class _AddSupplierScreenState extends State<AddSupplierScreen>
   @override
   Widget build(BuildContext context) {
     return AdminLayout(
-      title: widget.supplier == null ? 'Add New Party' : 'Edit Party',
+      title: widget.supplier == null ? 'Add New supplier' : 'Edit supplier',
       showBack: true,
       child: Form(
         key: _formKey,
@@ -168,7 +168,7 @@ class _AddSupplierScreenState extends State<AddSupplierScreen>
                     // ── Party Name ──────────────────────────
                     _inputField(
                       controller: nameCtrl,
-                      label: 'Party Name *',
+                      label: 'Supplier Name *',
                       required: true,
                     ),
 
@@ -483,8 +483,8 @@ class _AddSupplierScreenState extends State<AddSupplierScreen>
                   ),
                   child: Text(
                     widget.supplier == null
-                        ? 'Save Party'
-                        : 'Update Party',
+                        ? 'Save Supplier'
+                        : 'Update Supplier',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
