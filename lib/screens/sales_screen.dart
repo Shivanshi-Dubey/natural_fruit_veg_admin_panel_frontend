@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../layouts/admin_layout.dart';
 import '../models/order_model.dart';
 import '../utils/invoice_generator.dart';
+import 'create_order_screen.dart'; // ✅ import
 
 class SalesScreen extends StatefulWidget {
   const SalesScreen({super.key});
@@ -20,7 +21,6 @@ class _SalesScreenState extends State<SalesScreen> {
   bool hasError = false;
   List<Order> orders = [];
 
-  // Date filter
   DateTimeRange? customRange;
   String dateFilter = "today";
 
@@ -31,10 +31,7 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   Future<void> loadSales() async {
-    setState(() {
-      isLoading = true;
-      hasError = false;
-    });
+    setState(() { isLoading = true; hasError = false; });
     try {
       final res = await http.get(
         Uri.parse("$baseUrl/orders"),
@@ -47,22 +44,13 @@ class _SalesScreenState extends State<SalesScreen> {
             .map((e) => Order.fromJson(e))
             .where((o) => o.orderStatus == "delivered")
             .toList();
-        setState(() {
-          orders = parsed;
-          isLoading = false;
-        });
+        setState(() { orders = parsed; isLoading = false; });
       } else {
-        setState(() {
-          hasError = true;
-          isLoading = false;
-        });
+        setState(() { hasError = true; isLoading = false; });
       }
     } catch (e) {
       debugPrint("❌ Sales error: $e");
-      setState(() {
-        hasError = true;
-        isLoading = false;
-      });
+      setState(() { hasError = true; isLoading = false; });
     }
   }
 
@@ -74,15 +62,13 @@ class _SalesScreenState extends State<SalesScreen> {
             o.createdAt.month == now.month &&
             o.createdAt.day == now.day;
       } else if (dateFilter == "week") {
-        return o.createdAt
-            .isAfter(now.subtract(const Duration(days: 7)));
+        return o.createdAt.isAfter(now.subtract(const Duration(days: 7)));
       } else if (dateFilter == "month") {
         return o.createdAt.year == now.year &&
             o.createdAt.month == now.month;
       } else if (dateFilter == "custom" && customRange != null) {
         return o.createdAt.isAfter(
-                customRange!.start
-                    .subtract(const Duration(days: 1))) &&
+                customRange!.start.subtract(const Duration(days: 1))) &&
             o.createdAt.isBefore(
                 customRange!.end.add(const Duration(days: 1)));
       }
@@ -90,14 +76,11 @@ class _SalesScreenState extends State<SalesScreen> {
     }).toList();
   }
 
-  // ✅ Feature 23 — items total only, no delivery/handling
-  double get totalSales => filteredOrders.fold(
-      0, (sum, o) => sum + o.itemsTotal);
+  double get totalSales =>
+      filteredOrders.fold(0, (sum, o) => sum + o.itemsTotal);
 
   int get totalItemsSold => filteredOrders.fold(
-      0,
-      (sum, o) =>
-          sum + o.items.fold(0, (s, i) => s + i.quantity));
+      0, (sum, o) => sum + o.items.fold(0, (s, i) => s + i.quantity));
 
   Future<void> _pickCustomRange() async {
     final range = await showDateRangePicker(
@@ -111,10 +94,7 @@ class _SalesScreenState extends State<SalesScreen> {
           ),
     );
     if (range != null) {
-      setState(() {
-        customRange = range;
-        dateFilter = "custom";
-      });
+      setState(() { customRange = range; dateFilter = "custom"; });
     }
   }
 
@@ -125,6 +105,21 @@ class _SalesScreenState extends State<SalesScreen> {
     return AdminLayout(
       title: "Sales",
       showBack: true,
+      // ✅ FAB — Create New Sale button
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: Colors.green,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text(
+          "New Sale",
+          style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) => const CreateOrderScreen()),
+        ).then((_) => loadSales()), // ✅ refresh after creating sale
+      ),
       child: isLoading
           ? const Center(child: CircularProgressIndicator())
           : hasError
@@ -132,38 +127,30 @@ class _SalesScreenState extends State<SalesScreen> {
               : RefreshIndicator(
                   onRefresh: loadSales,
                   child: SingleChildScrollView(
-                    physics:
-                        const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(20),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 80), // ✅ bottom padding for FAB
                     child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        /* =========================
-                           📅 DATE FILTERS
-                        ========================= */
+
+                        // ── Date Filters ──────────────────────
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: Row(
                             children: [
                               _filterChip("Today", "today"),
                               const SizedBox(width: 8),
-                              _filterChip(
-                                  "This Week", "week"),
+                              _filterChip("This Week", "week"),
                               const SizedBox(width: 8),
-                              _filterChip(
-                                  "This Month", "month"),
+                              _filterChip("This Month", "month"),
                               const SizedBox(width: 8),
                               _filterChip("All", "all"),
                               const SizedBox(width: 8),
                               OutlinedButton.icon(
                                 onPressed: _pickCustomRange,
-                                icon: const Icon(
-                                    Icons.date_range,
-                                    size: 16),
+                                icon: const Icon(Icons.date_range, size: 16),
                                 label: Text(
-                                  customRange != null &&
-                                          dateFilter == "custom"
+                                  customRange != null && dateFilter == "custom"
                                       ? "${DateFormat('dd MMM').format(customRange!.start)} – ${DateFormat('dd MMM').format(customRange!.end)}"
                                       : "Custom",
                                 ),
@@ -174,70 +161,97 @@ class _SalesScreenState extends State<SalesScreen> {
 
                         const SizedBox(height: 20),
 
-                        /* =========================
-                           📊 SUMMARY CARDS
-                           Feature 23: items total only
-                        ========================= */
+                        // ── Summary Cards ─────────────────────
                         Row(
                           children: [
                             Expanded(
-                              child: _summaryCard(
-                                "Total Sales",
-                                "₹${totalSales.toStringAsFixed(0)}",
-                                Icons.trending_up,
-                                Colors.green,
-                              ),
+                              child: _summaryCard("Total Sales",
+                                  "₹${totalSales.toStringAsFixed(0)}",
+                                  Icons.trending_up, Colors.green),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: _summaryCard(
-                                "Orders",
-                                filtered.length.toString(),
-                                Icons.receipt_long,
-                                Colors.blue,
-                              ),
+                              child: _summaryCard("Orders",
+                                  filtered.length.toString(),
+                                  Icons.receipt_long, Colors.blue),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: _summaryCard(
-                                "Items Sold",
-                                totalItemsSold.toString(),
-                                Icons.shopping_basket,
-                                Colors.orange,
-                              ),
+                              child: _summaryCard("Items Sold",
+                                  totalItemsSold.toString(),
+                                  Icons.shopping_basket, Colors.orange),
                             ),
                           ],
                         ),
 
                         const SizedBox(height: 20),
 
-                        /* =========================
-                           📋 SALE INVOICES LIST
-                        ========================= */
-                        const Text(
-                          "Sale Invoices",
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16),
+                        // ── Sale Invoices Header ──────────────
+                        Row(
+                          mainAxisAlignment:
+                              MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              "Sale Invoices",
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16),
+                            ),
+                            // ✅ Also a text button for quick access
+                            TextButton.icon(
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        const CreateOrderScreen()),
+                              ).then((_) => loadSales()),
+                              icon: const Icon(Icons.add,
+                                  color: Colors.green, size: 16),
+                              label: const Text("Create Sale",
+                                  style:
+                                      TextStyle(color: Colors.green)),
+                            ),
+                          ],
                         ),
+
                         const SizedBox(height: 12),
 
                         if (filtered.isEmpty)
-                          const Center(
+                          Center(
                             child: Padding(
-                              padding: EdgeInsets.all(40),
-                              child: Text(
-                                "No sales in this period",
-                                style:
-                                    TextStyle(color: Colors.grey),
+                              padding: const EdgeInsets.all(40),
+                              child: Column(
+                                children: [
+                                  Icon(Icons.receipt_long_outlined,
+                                      size: 56,
+                                      color: Colors.grey.shade300),
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                    "No sales in this period",
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ElevatedButton.icon(
+                                    onPressed: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) =>
+                                              const CreateOrderScreen()),
+                                    ).then((_) => loadSales()),
+                                    style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green),
+                                    icon: const Icon(Icons.add),
+                                    label:
+                                        const Text("Create First Sale"),
+                                  ),
+                                ],
                               ),
                             ),
                           )
                         else
                           ListView.builder(
                             shrinkWrap: true,
-                            physics:
-                                const NeverScrollableScrollPhysics(),
+                            physics: const NeverScrollableScrollPhysics(),
                             itemCount: filtered.length,
                             itemBuilder: (_, i) =>
                                 _buildSaleCard(filtered[i]),
@@ -250,7 +264,6 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   Widget _buildSaleCard(Order order) {
-    // ✅ Feature 23 — show items total, not grand total
     final itemsTotal = order.itemsTotal;
 
     return Container(
@@ -261,10 +274,7 @@ class _SalesScreenState extends State<SalesScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE5E7EB)),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 6,
-          )
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6)
         ],
       ),
       child: Column(
@@ -277,18 +287,14 @@ class _SalesScreenState extends State<SalesScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      order.customerName,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15),
-                    ),
+                    Text(order.customerName,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 15)),
                     const SizedBox(height: 2),
-                    // ✅ Feature 24 — show invoice number
                     Text(
                       "Invoice #${order.id.substring(order.id.length - 6).toUpperCase()}",
-                      style: const TextStyle(
-                          color: Colors.grey, fontSize: 12),
+                      style:
+                          const TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                   ],
                 ),
@@ -304,10 +310,9 @@ class _SalesScreenState extends State<SalesScreen> {
                         color: Colors.green),
                   ),
                   Text(
-                    DateFormat('dd MMM • hh:mm a')
-                        .format(order.createdAt),
-                    style: const TextStyle(
-                        color: Colors.grey, fontSize: 11),
+                    DateFormat('dd MMM • hh:mm a').format(order.createdAt),
+                    style:
+                        const TextStyle(color: Colors.grey, fontSize: 11),
                   ),
                 ],
               ),
@@ -318,12 +323,10 @@ class _SalesScreenState extends State<SalesScreen> {
           const Divider(height: 1),
           const SizedBox(height: 10),
 
-          // Items list
           ...order.items.map((item) => Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Row(
-                  mainAxisAlignment:
-                      MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text("${item.name} × ${item.quantity}",
                         style: const TextStyle(fontSize: 13)),
@@ -339,7 +342,6 @@ class _SalesScreenState extends State<SalesScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Payment badge
               Container(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 10, vertical: 4),
@@ -360,16 +362,13 @@ class _SalesScreenState extends State<SalesScreen> {
                   ),
                 ),
               ),
-
-              // Download invoice button
               TextButton.icon(
                 onPressed: () =>
-                    InvoiceGenerator.downloadInvoice(
-                        context, order),
+                    InvoiceGenerator.downloadInvoice(context, order),
                 icon: const Icon(Icons.download, size: 16),
                 label: const Text("Invoice"),
-                style: TextButton.styleFrom(
-                    foregroundColor: Colors.green),
+                style:
+                    TextButton.styleFrom(foregroundColor: Colors.green),
               ),
             ],
           ),
@@ -392,17 +391,15 @@ class _SalesScreenState extends State<SalesScreen> {
         children: [
           Icon(icon, color: color, size: 20),
           const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: color),
-          ),
+          Text(value,
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: color)),
           const SizedBox(height: 2),
           Text(label,
-              style: const TextStyle(
-                  color: Colors.grey, fontSize: 12)),
+              style:
+                  const TextStyle(color: Colors.grey, fontSize: 12)),
         ],
       ),
     );
@@ -413,8 +410,8 @@ class _SalesScreenState extends State<SalesScreen> {
     return GestureDetector(
       onTap: () => setState(() => dateFilter = value),
       child: Container(
-        padding: const EdgeInsets.symmetric(
-            horizontal: 14, vertical: 8),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: selected ? Colors.green : Colors.grey[100],
           borderRadius: BorderRadius.circular(20),
@@ -436,8 +433,7 @@ class _SalesScreenState extends State<SalesScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.error_outline,
-              color: Colors.red, size: 56),
+          const Icon(Icons.error_outline, color: Colors.red, size: 56),
           const SizedBox(height: 16),
           const Text("Failed to load sales"),
           const SizedBox(height: 16),
@@ -445,8 +441,8 @@ class _SalesScreenState extends State<SalesScreen> {
             onPressed: loadSales,
             icon: const Icon(Icons.refresh),
             label: const Text("Retry"),
-            style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: Colors.green),
           ),
         ],
       ),

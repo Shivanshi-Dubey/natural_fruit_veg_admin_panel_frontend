@@ -13,6 +13,7 @@ import '../screens/settings_screen.dart';
 // 🔹 Purchase & Inventory
 import '../screens/suppliers_screen.dart';
 import '../screens/purchase_invoices_screen.dart';
+import '../screens/purchase_list_screen.dart';  
 import '../screens/purchase_returns_screen.dart';
 import '../screens/grn_screen.dart';
 import '../screens/expenses_screen.dart';
@@ -31,6 +32,7 @@ import '../screens/salesinvoicescreen.dart';
 import '../screens/sales_list_screen.dart';
 import '../screens/delivery_charges_screen.dart';
 import '../screens/handling_charges_screen.dart';
+import '../screens/stock_management_screen.dart';
 
 // ✅ NEW — Features 20-23
 import '../screens/delivery_payments_screen.dart';
@@ -42,6 +44,7 @@ class AdminLayout extends StatelessWidget {
   final String title;
   final bool showBack;
   final ValueChanged<String>? onSearch;
+  final Widget? floatingActionButton;
 
   const AdminLayout({
     super.key,
@@ -49,6 +52,7 @@ class AdminLayout extends StatelessWidget {
     required this.title,
     this.showBack = false,
     this.onSearch,
+    this.floatingActionButton,
   });
 
   void _navigate(BuildContext context, Widget screen) {
@@ -68,6 +72,7 @@ class AdminLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
+       floatingActionButton: floatingActionButton,
       body: Row(
         children: [
           /* =========================
@@ -162,7 +167,10 @@ class AdminLayout extends StatelessWidget {
                       context,
                       'Add Product',
                       const AddProductScreen(),
+
                     ),
+                    // ✅ Stock Management added
+                    _subMenuItem(context, 'Stock Management', const StockManagementScreen()),
                   ],
                 ),
 
@@ -182,6 +190,7 @@ class AdminLayout extends StatelessWidget {
                       'Purchase Invoices',
                       const PurchaseInvoicesScreen(),
                     ),
+                      _subMenuItem(context, 'Purchase List', const PurchaseListScreen()),
                     _subMenuItem(
                       context,
                       'Purchase Returns',
@@ -361,7 +370,22 @@ class AdminLayout extends StatelessWidget {
                   ),
                 ),
 
-                Expanded(child: child),
+                Expanded(
+                  child: floatingActionButton != null
+                      ? Stack(
+                          children: [
+                            child,
+                            // ✅ Position FAB bottom-right for web layout
+                            Positioned(
+                              bottom: 24,
+                              right: 24,
+                              child: floatingActionButton!,
+                            ),
+                          ],
+                        )
+                      : child,
+                ),
+
               ],
             ),
           ),
