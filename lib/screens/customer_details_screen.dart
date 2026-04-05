@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import 'package:intl/intl.dart';
 import '../layouts/admin_layout.dart';
 import '../providers/order_provider.dart';
 import '../utils/csv_export.dart';
+import '../utils/invoice_generator.dart';
 
 class CustomerDetailsScreen extends StatelessWidget {
   final String customerName;
@@ -20,29 +21,27 @@ class CustomerDetailsScreen extends StatelessWidget {
         .orders
         .where((o) => o.customerName == customerName)
         .toList()
-      ..sort(
-        (a, b) => b.createdAt.compareTo(a.createdAt),
-      ); // latest first
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     final int totalOrders = orders.length;
     final double totalSpent =
-        orders.fold(0.0, (sum, o) => sum + o.totalPrice);
-
+        orders.fold(0.0, (sum, o) => sum + o.itemsTotal);
     final int cancelledCount =
-        orders.where((o) => o.status == 'cancelled').length;
-
+        orders.where((o) => o.orderStatus == 'cancelled').length;
     final String tag = _customerTag(totalOrders, cancelledCount);
     final Color tagColor = _tagColor(tag);
+    final fmt = DateFormat('dd MMM yyyy');
 
     return AdminLayout(
       title: 'Customer Details',
       showBack: true,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ================= CUSTOMER INFO =================
+
+            // ── Customer Info Card ────────────────────────
             Container(
               padding: const EdgeInsets.all(16),
               decoration: _box(),
@@ -54,39 +53,17 @@ class CustomerDetailsScreen extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Text(
-                            customerName,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                          Text(customerName,
+                              style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600)),
                           const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: tagColor.withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              tag,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: tagColor,
-                              ),
-                            ),
-                          ),
+                          _tagChip(tag, tagColor),
                         ],
                       ),
                       const SizedBox(height: 4),
-                      const Text(
-                        'Customer Account',
-                        style: TextStyle(color: Colors.grey),
-                      ),
+                      const Text('Customer Account',
+                          style: TextStyle(color: Colors.grey)),
                     ],
                   ),
                   Column(
@@ -95,26 +72,24 @@ class CustomerDetailsScreen extends StatelessWidget {
                       Text(
                         '₹${totalSpent.toStringAsFixed(0)}',
                         style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold),
                       ),
-                      const Text(
-                        'Lifetime Value',
-                        style: TextStyle(color: Colors.grey),
-                      ),
+                      const Text('Lifetime Value',
+                          style: TextStyle(color: Colors.grey)),
                     ],
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
-            // ================= KPIs =================
+            // ── KPI Cards ─────────────────────────────────
             Row(
               children: [
                 _kpi('Total Orders', totalOrders.toString()),
+                const SizedBox(width: 12),
                 _kpi(
                   'Avg Order',
                   totalOrders == 0
@@ -123,118 +98,225 @@ class CustomerDetailsScreen extends StatelessWidget {
                 ),
               ],
             ),
-
-            const SizedBox(height: 16),
-
+            const SizedBox(height: 12),
             Row(
               children: [
-                _kpi(
-                  'Repeat Customer',
-                  totalOrders > 1 ? 'YES' : 'NO',
-                ),
-                _kpi(
-                  'Cancelled Orders',
-                  cancelledCount.toString(),
-                ),
+                _kpi('Repeat Customer', totalOrders > 1 ? 'YES' : 'NO'),
+                const SizedBox(width: 12),
+                _kpi('Cancelled', cancelledCount.toString()),
               ],
             ),
 
             const SizedBox(height: 24),
 
-            // ================= ORDER HISTORY =================
+            // ── Order History Header ──────────────────────
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Order History',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.download),
-                  label: const Text('Export Orders'),
+                const Text('Order History',
+                    style: TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600)),
+                TextButton.icon(
                   onPressed: orders.isEmpty
                       ? null
                       : () {
                           final rows = <List<String>>[
-                            ['Order ID', 'Amount', 'Payment', 'Status'],
-                            ...orders.map(
-                              (o) => [
-                                o.id,
-                                o.totalPrice.toStringAsFixed(0),
-                                o.paymentStatus,
-                                o.status,
-                              ],
-                            ),
+                            // ✅ Date added to export too
+                            ['Date', 'Order ID', 'Amount', 'Payment', 'Status'],
+                            ...orders.map((o) => [
+                                  fmt.format(o.createdAt),
+                                  o.id.substring(o.id.length >= 6
+                                      ? o.id.length - 6
+                                      : 0),
+                                  o.itemsTotal.toStringAsFixed(0),
+                                  o.paymentMethod,
+                                  o.orderStatus,
+                                ]),
                           ];
-
                           CsvExport.downloadCsv(
                             filename:
                                 'orders_${customerName.replaceAll(" ", "_")}.csv',
                             rows: rows,
                           );
                         },
+                  icon: const Icon(Icons.download, size: 16),
+                  label: const Text('Export'),
                 ),
               ],
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
 
-            Expanded(
-              child: Container(
-                decoration: _box(),
-                child: SingleChildScrollView(
-                  child: DataTable(
-                    headingRowColor: MaterialStateProperty.all(
-                      const Color(0xFFF9FAFB),
+            // ── Order History List ────────────────────────
+            orders.isEmpty
+                ? Container(
+                    padding: const EdgeInsets.all(30),
+                    decoration: _box(),
+                    child: const Center(
+                      child: Text('No orders found',
+                          style: TextStyle(color: Colors.grey)),
                     ),
-                    columns: const [
-                      DataColumn(label: Text('Order ID')),
-                      DataColumn(label: Text('Amount')),
-                      DataColumn(label: Text('Payment')),
-                      DataColumn(label: Text('Status')),
-                    ],
-                    rows: orders.map((o) {
-                      return DataRow(
-                        cells: [
-                          DataCell(
-                            Text(
-                              o.id.substring(o.id.length - 6),
+                  )
+                : ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: orders.length,
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: 8),
+                    itemBuilder: (context, i) {
+                      final o = orders[i];
+                      return Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: _box(),
+                        child: Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                          children: [
+                            // ── Row 1: Date + Amount ──────
+                            Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                // ✅ DATE shown prominently
+                                Row(
+                                  children: [
+                                    const Icon(
+                                        Icons.calendar_today,
+                                        size: 13,
+                                        color: Colors.grey),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      fmt.format(o.createdAt),
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight:
+                                              FontWeight.w600,
+                                          color: Colors.black87),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      DateFormat('hh:mm a')
+                                          .format(o.createdAt),
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors
+                                              .grey.shade500),
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  '₹${o.itemsTotal.toStringAsFixed(0)}',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      color: Color(0xFF2E7D32)),
+                                ),
+                              ],
                             ),
-                          ),
-                          DataCell(
-                            Text(
-                              '₹${o.totalPrice.toStringAsFixed(0)}',
+
+                            const SizedBox(height: 8),
+
+                            // ── Row 2: Order ID + Status ──
+                            Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Order #${o.id.substring(o.id.length >= 6 ? o.id.length - 6 : 0).toUpperCase()}',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600),
+                                ),
+                                Row(
+                                  children: [
+                                    _statusChip(o.orderStatus),
+                                    const SizedBox(width: 8),
+                                    // Payment badge
+                                    Container(
+                                      padding:
+                                          const EdgeInsets.symmetric(
+                                              horizontal: 7,
+                                              vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: o.paymentMethod ==
+                                                'cod'
+                                            ? Colors.orange.shade50
+                                            : Colors.blue.shade50,
+                                        borderRadius:
+                                            BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        o.paymentMethod
+                                            .toUpperCase(),
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: o.paymentMethod ==
+                                                  'cod'
+                                              ? Colors.orange.shade700
+                                              : Colors.blue.shade700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
-                          ),
-                          DataCell(
+
+                            const SizedBox(height: 8),
+
+                            // ── Row 3: Items ──────────────
                             Text(
-                              o.paymentStatus.toUpperCase(),
+                              o.items
+                                  .map((it) =>
+                                      '${it.name} ×${it.quantity}')
+                                  .join(', '),
                               style: TextStyle(
-                                color: o.paymentStatus == 'paid'
-                                    ? Colors.green
-                                    : Colors.orange,
-                                fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+
+                            const SizedBox(height: 8),
+
+                            // ── Row 4: Invoice Button ─────
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton.icon(
+                                onPressed: () =>
+                                    InvoiceGenerator
+                                        .downloadInvoice(context, o),
+                                icon: const Icon(Icons.download,
+                                    size: 14),
+                                label: const Text('Invoice',
+                                    style:
+                                        TextStyle(fontSize: 12)),
+                                style: TextButton.styleFrom(
+                                  foregroundColor:
+                                      const Color(0xFF2E7D32),
+                                  padding:
+                                      const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4),
+                                  minimumSize: Size.zero,
+                                ),
                               ),
                             ),
-                          ),
-                          DataCell(_statusChip(o.status)),
-                        ],
+                          ],
+                        ),
                       );
-                    }).toList(),
+                    },
                   ),
-                ),
-              ),
-            ),
+
+            const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
 
-  // ================= BUSINESS LOGIC =================
+  // ── Helpers ───────────────────────────────────────────────
 
   String _customerTag(int totalOrders, int cancelled) {
     if (cancelled >= 2) return 'RISK';
@@ -245,48 +327,54 @@ class CustomerDetailsScreen extends StatelessWidget {
 
   Color _tagColor(String tag) {
     switch (tag) {
-      case 'LOYAL':
-        return Colors.green;
-      case 'REGULAR':
-        return Colors.orange;
-      case 'NEW':
-        return Colors.blue;
-      case 'RISK':
-        return Colors.red;
-      default:
-        return Colors.grey;
+      case 'LOYAL': return Colors.green;
+      case 'REGULAR': return Colors.orange;
+      case 'NEW': return Colors.blue;
+      case 'RISK': return Colors.red;
+      default: return Colors.grey;
     }
   }
 
-  // ================= UI HELPERS =================
-
   static BoxDecoration _box() => BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFE5E7EB)),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.03), blurRadius: 4)
+        ],
       );
+
+  Widget _tagChip(String tag, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(tag,
+          style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color)),
+    );
+  }
 
   Widget _kpi(String title, String value) {
     return Expanded(
       child: Container(
-        margin: const EdgeInsets.only(right: 16),
         padding: const EdgeInsets.all(16),
         decoration: _box(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: const TextStyle(fontSize: 13, color: Colors.grey),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            Text(title,
+                style: const TextStyle(
+                    fontSize: 12, color: Colors.grey)),
+            const SizedBox(height: 6),
+            Text(value,
+                style: const TextStyle(
+                    fontSize: 22, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
@@ -294,30 +382,16 @@ class CustomerDetailsScreen extends StatelessWidget {
   }
 
   Widget _statusChip(String status) {
-    Color color;
-    switch (status) {
-      case 'placed':
-        color = Colors.grey;
-        break;
-      case 'accepted':
-        color = Colors.blue;
-        break;
-      case 'assigned':
-      case 'out_for_delivery':
-        color = Colors.orange;
-        break;
-      case 'delivered':
-        color = Colors.green;
-        break;
-      case 'cancelled':
-        color = Colors.red;
-        break;
-      default:
-        color = Colors.grey;
-    }
-
+    final color = switch (status) {
+      'delivered' => Colors.green,
+      'placed' => Colors.grey,
+      'accepted' => Colors.blue,
+      'assigned' || 'out_for_delivery' => Colors.orange,
+      'cancelled' => Colors.red,
+      _ => Colors.grey,
+    };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
         color: color.withOpacity(0.12),
         borderRadius: BorderRadius.circular(4),
@@ -325,10 +399,9 @@ class CustomerDetailsScreen extends StatelessWidget {
       child: Text(
         status.toUpperCase(),
         style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: color),
       ),
     );
   }
