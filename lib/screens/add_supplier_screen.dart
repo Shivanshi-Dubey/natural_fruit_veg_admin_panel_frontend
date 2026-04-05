@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
-import '../layouts/admin_layout.dart';
 import 'package:provider/provider.dart';
+
+import '../layouts/admin_layout.dart';
 import '../providers/supplier_provider.dart';
 import '../models/supplier_model.dart';
 
 class AddSupplierScreen extends StatefulWidget {
-  const AddSupplierScreen({super.key});
+  final Supplier? supplier; // ✅ for edit mode
+
+  const AddSupplierScreen({
+    super.key,
+    this.supplier,
+  });
 
   @override
   State<AddSupplierScreen> createState() => _AddSupplierScreenState();
@@ -22,10 +28,27 @@ class _AddSupplierScreenState extends State<AddSupplierScreen> {
 
   bool isActive = true;
 
+  // ================= INIT =================
+  @override
+  void initState() {
+    super.initState();
+
+    // ✅ Prefill if editing
+    if (widget.supplier != null) {
+      nameCtrl.text = widget.supplier!.name;
+      phoneCtrl.text = widget.supplier!.phone;
+      emailCtrl.text = widget.supplier!.email;
+      addressCtrl.text = widget.supplier!.address;
+      gstCtrl.text = widget.supplier!.gstNumber;
+      isActive = widget.supplier!.isActive;
+    }
+  }
+
+  // ================= UI =================
   @override
   Widget build(BuildContext context) {
     return AdminLayout(
-      title: 'Add Supplier',
+      title: widget.supplier == null ? 'Add Supplier' : 'Edit Supplier',
       showBack: true,
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -105,10 +128,14 @@ class _AddSupplierScreenState extends State<AddSupplierScreen> {
                     child: const Text('Cancel'),
                   ),
                   const SizedBox(width: 12),
-                 ElevatedButton.icon(
-  icon: const Icon(Icons.save),
-  label: const Text('Save Supplier'),
-  onPressed: _saveSupplier, // ✅ already correct, no change needed
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.save),
+                    label: Text(
+                      widget.supplier == null
+                          ? 'Save Supplier'
+                          : 'Update Supplier',
+                    ),
+                    onPressed: _saveSupplier,
                   ),
                 ],
               ),
@@ -119,25 +146,52 @@ class _AddSupplierScreenState extends State<AddSupplierScreen> {
     );
   }
 
-// ================= SAVE — CONNECTED TO BACKEND =================
-Future<void> _saveSupplier() async {
-  if (!_formKey.currentState!.validate()) return;
+  // ================= SAVE =================
+  Future<void> _saveSupplier() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  final supplier = Supplier(
-    id: '',
-    name: nameCtrl.text.trim(),
-    phone: phoneCtrl.text.trim(),
-    email: emailCtrl.text.trim(),
-    address: addressCtrl.text.trim(),
-    gstNumber: gstCtrl.text.trim(),
-    isActive: isActive,
-    createdAt: DateTime.now(), 
-  );
+    final supplier = Supplier(
+      id: widget.supplier?.id ?? '',
+      name: nameCtrl.text.trim(),
+      phone: phoneCtrl.text.trim(),
+      email: emailCtrl.text.trim(),
+      address: addressCtrl.text.trim(),
+      gstNumber: gstCtrl.text.trim(),
+      isActive: isActive,
+      createdAt: widget.supplier?.createdAt ?? DateTime.now(),
+    );
 
-  await context.read<SupplierProvider>().addSupplier(supplier, context);
-}
+    try {
+      if (widget.supplier == null) {
+        // ➕ ADD
+        await context.read<SupplierProvider>().addSupplier(supplier, context);
+      } else {
+        // ✏️ UPDATE
+        await context.read<SupplierProvider>().updateSupplier(supplier, context);
+      }
 
-  // ================= UI HELPERS =================
+      // ✅ Success Message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.supplier == null
+                ? "Supplier Added Successfully"
+                : "Supplier Updated Successfully",
+          ),
+        ),
+      );
+
+      Navigator.pop(context); // go back
+
+    } catch (e) {
+      // ❌ Error Handling
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+    }
+  }
+
+  // ================= HELPERS =================
 
   Widget _sectionTitle(String title) {
     return Padding(
@@ -168,7 +222,7 @@ Future<void> _saveSupplier() async {
         border: const OutlineInputBorder(),
       ),
       validator: required
-          ? (v) => v == null || v.isEmpty ? 'Required' : null
+          ? (v) => v == null || v.trim().isEmpty ? 'Required' : null
           : null,
     );
   }

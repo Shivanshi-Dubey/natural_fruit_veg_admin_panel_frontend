@@ -61,7 +61,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
     final allProducts = provider.products;
 
     return AdminLayout(
-      title: 'Products',
+      title: 'Items',
       onSearch: _onSearch,
       child: provider.isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -78,7 +78,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text(
-                            'Product Inventory',
+                            'Item Inventory',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
@@ -86,13 +86,13 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                           ),
                           ElevatedButton.icon(
                             icon: const Icon(Icons.add),
-                            label: const Text('Add Product'),
+                            label: const Text('Add Item'),
                             onPressed: () async {
                               await Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => AdminLayout(
-                                    title: 'Add Product',
+                                    title: 'Add Item',
                                     showBack: true,
                                     child: const AddProductScreen(),
                                   ),
@@ -188,7 +188,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                           color: Colors.grey.shade300),
                                       const SizedBox(height: 12),
                                       Text(
-                                        'No products found',
+                                        'No Item found',
                                         style: TextStyle(
                                             color: Colors.grey.shade500),
                                       ),
@@ -218,7 +218,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                         const Color(0xFFF9FAFB),
                                       ),
                                       columns: const [
-                                        DataColumn(label: Text('Product')),
+                                        DataColumn(label: Text('Item')),
                                         DataColumn(label: Text('Category')),
                                         DataColumn(label: Text('Price')),
                                         DataColumn(label: Text('Stock')),
@@ -422,7 +422,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                                           builder: (_) =>
                                                               AdminLayout(
                                                             title:
-                                                                'Edit Product',
+                                                                'Edit Item',
                                                             showBack: true,
                                                             child:
                                                                 AddProductScreen(
@@ -449,7 +449,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                                         builder: (_) =>
                                                             AlertDialog(
                                                           title: const Text(
-                                                              'Delete Product'),
+                                                              'Delete Item'),
                                                           content: Text(
                                                               'Are you sure you want to delete "${product.name}"?'),
                                                           actions: [
