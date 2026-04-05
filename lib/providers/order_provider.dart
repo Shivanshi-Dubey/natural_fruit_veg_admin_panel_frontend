@@ -39,7 +39,6 @@ class OrderProvider with ChangeNotifier {
 
       if (response.statusCode == 200) {
         final List data = jsonDecode(response.body);
-
         _orders = data.map((e) => Order.fromJson(e)).toList();
         _errorMessage = null;
       } else {
@@ -54,30 +53,45 @@ class OrderProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> createOrder(Map<String, dynamic> orderData) async {
-  try {
-    final res = await http.post(
-      Uri.parse(baseUrl), // already defined
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode(orderData),
-    );
+  // ✅ FIXED: now returns Order? so invoice screen can open after save
+  Future<Order?> createOrder(Map<String, dynamic> orderData) async {
+    try {
+      final res = await http.post(
+        Uri.parse(baseUrl),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(orderData),
+      );
 
-    if (res.statusCode == 200 || res.statusCode == 201) {
-      await fetchOrders(); // refresh list
-    } else {
-      _errorMessage = "Failed to create order";
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        final data = jsonDecode(res.body);
+
+        // ✅ Parse the created order from response
+        final Order createdOrder = Order.fromJson(
+          data is Map && data.containsKey('order')
+              ? data['order']  // if API returns { order: {...} }
+              : data,          // if API returns the order directly
+        );
+
+        // ✅ Add to local list immediately (no need to re-fetch)
+        _orders.insert(0, createdOrder);
+        notifyListeners();
+
+        return createdOrder; // ✅ return so invoice screen can use it
+      } else {
+        _errorMessage = "Failed to create order (${res.statusCode})";
+        notifyListeners();
+        return null;
+      }
+    } catch (e) {
+      _errorMessage = "Create order error: $e";
       notifyListeners();
+      return null;
     }
-  } catch (e) {
-    _errorMessage = "Create order error: $e";
-    notifyListeners();
   }
-}
 
   /// ================= AUTO REFRESH =================
   void startAutoRefresh() {
     _autoRefreshTimer?.cancel();
-
     _autoRefreshTimer = Timer.periodic(
       const Duration(seconds: 10),
       (_) => fetchOrders(silent: true),
@@ -94,7 +108,6 @@ class OrderProvider with ChangeNotifier {
       final response = await http.put(
         Uri.parse("$baseUrl/admin/accept/$orderId"),
       );
-
       if (response.statusCode == 200) {
         await fetchOrders();
       } else {
@@ -117,7 +130,6 @@ class OrderProvider with ChangeNotifier {
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"status": status}),
       );
-
       if (response.statusCode == 200) {
         await fetchOrders();
       } else {
@@ -131,8 +143,6 @@ class OrderProvider with ChangeNotifier {
     }
   }
 
-
-
   /// ================= ASSIGN DELIVERY BOY =================
   Future<void> assignDeliveryBoy(
       String orderId, String deliveryBoyId) async {
@@ -140,11 +150,8 @@ class OrderProvider with ChangeNotifier {
       final response = await http.put(
         Uri.parse("$baseUrl/admin/assign/$orderId"),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "deliveryBoyId": deliveryBoyId
-        }),
+        body: jsonEncode({"deliveryBoyId": deliveryBoyId}),
       );
-
       if (response.statusCode == 200) {
         await fetchOrders();
       } else {
@@ -168,17 +175,16 @@ class OrderProvider with ChangeNotifier {
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"returnStatus": status}),
       );
-
       await fetchOrders();
     } catch (e) {
       debugPrint("Return update error: $e");
     }
   }
 
- void addOrder(Order order) {
-  _orders.insert(0, order); 
-  notifyListeners();
-}
+  void addOrder(Order order) {
+    _orders.insert(0, order);
+    notifyListeners();
+  }
 
   /// ================= CLEAR ERROR =================
   void clearError() {

@@ -29,8 +29,6 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   DateTime selectedDate = DateTime.now();
   String paymentMethod = "cash";
   bool isSaving = false;
-  String? createdInvoiceNumber;
-  Order? createdOrder;
 
   List<dynamic> products = [];
   bool loadingProducts = true;
@@ -79,7 +77,6 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   double get total =>
       items.fold(0, (sum, i) => sum + i.price * i.quantity);
 
-  // ✅ Feature 24 — generate invoice number from date + random
   String _generateInvoiceNumber() {
     final now = DateTime.now();
     final datePart = DateFormat('yyyyMMdd').format(now);
@@ -110,8 +107,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) {
         String search = '';
@@ -126,12 +122,21 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
                 const Text("Pick Product",
                     style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16)),
+                        fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 12),
                 TextField(
+                  autofocus: true,
                   decoration: const InputDecoration(
                     hintText: "Search...",
                     prefixIcon: Icon(Icons.search),
@@ -150,10 +155,39 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                             .toLowerCase()
                             .contains(search))
                         .map((p) => ListTile(
-                              title: Text(
-                                  p['name']?.toString() ?? ''),
+                              leading: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade50,
+                                  borderRadius:
+                                      BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                    Icons.inventory_2_outlined,
+                                    color: Colors.green,
+                                    size: 18),
+                              ),
+                              title:
+                                  Text(p['name']?.toString() ?? ''),
                               subtitle: Text(
                                   "₹${p['price']} • Stock: ${p['stock'] ?? 0}"),
+                              trailing: (p['stock'] ?? 0) <= 0
+                                  ? Container(
+                                      padding:
+                                          const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.shade50,
+                                        borderRadius:
+                                            BorderRadius.circular(4),
+                                      ),
+                                      child: const Text("Out of Stock",
+                                          style: TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.red)),
+                                    )
+                                  : null,
                               onTap: () {
                                 Navigator.pop(context);
                                 setState(() {
@@ -209,29 +243,36 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       "deliveryCharge": 0,
       "handlingCharge": 0,
       "createdAt": selectedDate.toIso8601String(),
-      "invoiceNumber": invoiceNumber, // ✅ Feature 24
+      "invoiceNumber": invoiceNumber,
     };
 
     try {
-      await context.read<OrderProvider>().createOrder(orderData);
+      // ✅ Save order and get back the created order object
+      final createdOrder =
+          await context.read<OrderProvider>().createOrder(orderData);
 
-      setState(() {
-        createdInvoiceNumber = invoiceNumber;
-        isSaving = false;
-      });
+      setState(() => isSaving = false);
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              "✅ Order created — Invoice: $invoiceNumber"),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-
-      Navigator.pop(context);
+      // ✅ Show invoice screen immediately after saving
+      if (createdOrder != null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => InvoicePreviewScreen(order: createdOrder),
+          ),
+        );
+      } else {
+        // Fallback — go back if order object not returned
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("✅ Order saved — Invoice: $invoiceNumber"),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context);
+      }
     } catch (e) {
       setState(() => isSaving = false);
       if (!mounted) return;
@@ -254,9 +295,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            /* =========================
-               📋 INVOICE NUMBER (Feature 24)
-            ========================= */
+            // ── Invoice Number Banner ───────────────────────
             Container(
               padding: const EdgeInsets.symmetric(
                   horizontal: 14, vertical: 10),
@@ -282,13 +321,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
             const SizedBox(height: 16),
 
-            /* =========================
-               📅 DATE
-            ========================= */
+            // ── Date ────────────────────────────────────────
             _card(
               child: Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
@@ -296,8 +332,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                           size: 18, color: Colors.grey),
                       const SizedBox(width: 8),
                       Text(
-                        DateFormat('dd MMM yyyy')
-                            .format(selectedDate),
+                        DateFormat('dd MMM yyyy').format(selectedDate),
                         style: const TextStyle(
                             fontWeight: FontWeight.w600),
                       ),
@@ -313,17 +348,14 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
             const SizedBox(height: 12),
 
-            /* =========================
-               👤 CUSTOMER
-            ========================= */
+            // ── Customer ─────────────────────────────────────
             _card(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text("Customer",
                       style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15)),
+                          fontWeight: FontWeight.bold, fontSize: 15)),
                   const SizedBox(height: 10),
                   TextField(
                     controller: nameController,
@@ -350,37 +382,26 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
             const SizedBox(height: 12),
 
-            /* =========================
-               💳 PAYMENT METHOD
-            ========================= */
+            // ── Payment Method ───────────────────────────────
             _card(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text("Payment Method",
                       style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15)),
+                          fontWeight: FontWeight.bold, fontSize: 15)),
                   const SizedBox(height: 8),
                   Row(
-                    children: [
-                      "cash",
-                      "upi",
-                      "cod",
-                    ]
+                    children: ["cash", "upi", "cod"]
                         .map((method) => Padding(
-                              padding: const EdgeInsets.only(
-                                  right: 8),
+                              padding:
+                                  const EdgeInsets.only(right: 8),
                               child: ChoiceChip(
-                                label: Text(
-                                    method.toUpperCase()),
-                                selected:
-                                    paymentMethod == method,
-                                selectedColor:
-                                    Colors.green[100],
+                                label: Text(method.toUpperCase()),
+                                selected: paymentMethod == method,
+                                selectedColor: Colors.green[100],
                                 onSelected: (_) => setState(
-                                    () =>
-                                        paymentMethod = method),
+                                    () => paymentMethod = method),
                               ),
                             ))
                         .toList(),
@@ -391,30 +412,25 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
             const SizedBox(height: 12),
 
-            /* =========================
-               🛒 ADD ITEMS
-            ========================= */
+            // ── Add Items ────────────────────────────────────
             _card(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text("Items",
                           style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 15)),
                       TextButton.icon(
-                        onPressed: loadingProducts
-                            ? null
-                            : _pickFromProducts,
+                        onPressed:
+                            loadingProducts ? null : _pickFromProducts,
                         icon: const Icon(Icons.inventory_2_outlined,
                             color: Colors.green),
                         label: const Text("From Products",
-                            style:
-                                TextStyle(color: Colors.green)),
+                            style: TextStyle(color: Colors.green)),
                       ),
                     ],
                   ),
@@ -486,12 +502,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                                   fontWeight: FontWeight.bold),
                             ),
                             IconButton(
-                              icon: const Icon(
-                                  Icons.delete_outline,
-                                  color: Colors.red,
-                                  size: 18),
-                              onPressed: () => setState(
-                                  () => items.removeAt(i)),
+                              icon: const Icon(Icons.delete_outline,
+                                  color: Colors.red, size: 18),
+                              onPressed: () =>
+                                  setState(() => items.removeAt(i)),
                             ),
                           ],
                         ),
@@ -504,18 +518,14 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
             const SizedBox(height: 12),
 
-            /* =========================
-               💰 TOTAL
-            ========================= */
+            // ── Total ────────────────────────────────────────
             _card(
               child: Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text("Total Amount",
                       style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16)),
+                          fontWeight: FontWeight.bold, fontSize: 16)),
                   Text(
                     "₹${total.toStringAsFixed(0)}",
                     style: const TextStyle(
@@ -529,9 +539,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
             const SizedBox(height: 20),
 
-            /* =========================
-               💾 SAVE BUTTON
-            ========================= */
+            // ── Save Button ──────────────────────────────────
             SizedBox(
               width: double.infinity,
               height: 52,
@@ -553,8 +561,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 label: Text(
                   isSaving ? "Saving..." : "Save & Generate Invoice",
                   style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold),
+                      fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -575,11 +582,258 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         border: Border.all(color: const Color(0xFFE5E7EB)),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 6)
+              color: Colors.black.withOpacity(0.04), blurRadius: 6)
         ],
       ),
       child: child,
+    );
+  }
+}
+
+// ============================================================
+// ✅ INVOICE PREVIEW SCREEN
+// Opens automatically after saving a sale
+// User can Download, Share, or go to Sale List
+// ============================================================
+class InvoicePreviewScreen extends StatelessWidget {
+  final Order order;
+  const InvoicePreviewScreen({super.key, required this.order});
+
+  static const _green = Color(0xFF2E7D32);
+
+  @override
+  Widget build(BuildContext context) {
+    final invoiceId =
+        order.id.substring(order.id.length >= 6 ? order.id.length - 6 : 0)
+            .toUpperCase();
+
+    return Scaffold(
+      backgroundColor: Colors.grey.shade100,
+      appBar: AppBar(
+        backgroundColor: _green,
+        foregroundColor: Colors.white,
+        title: const Text("Invoice Generated",
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        automaticallyImplyLeading: false,
+        actions: [
+          TextButton.icon(
+            onPressed: () =>
+                Navigator.pushNamedAndRemoveUntil(
+                    context, '/sale-list', (r) => r.isFirst),
+            icon: const Icon(Icons.list_alt, color: Colors.white, size: 18),
+            label: const Text("Sale List",
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            // ── Success Banner ──────────────────────────────
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.green.shade200),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: const BoxDecoration(
+                      color: _green,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.check,
+                        color: Colors.white, size: 32),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text("Sale Saved Successfully!",
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: _green)),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Invoice #$invoiceId",
+                    style: TextStyle(
+                        color: Colors.grey.shade600, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // ── Invoice Summary Card ────────────────────────
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 6)
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(order.customerName,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16)),
+                          const SizedBox(height: 2),
+                          Text("Invoice #$invoiceId",
+                              style: TextStyle(
+                                  color: Colors.grey.shade500,
+                                  fontSize: 12)),
+                        ],
+                      ),
+                      Text(
+                        "₹${order.itemsTotal.toStringAsFixed(0)}",
+                        style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: _green),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 4),
+                  Text(
+                    DateFormat('dd MMM yyyy • hh:mm a')
+                        .format(order.createdAt),
+                    style: TextStyle(
+                        fontSize: 11, color: Colors.grey.shade500),
+                  ),
+
+                  const Divider(height: 20),
+
+                  // Items
+                  ...order.items.map((item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Row(
+                          mainAxisAlignment:
+                              MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text("${item.name} × ${item.quantity}",
+                                style: const TextStyle(fontSize: 13)),
+                            Text(
+                                "₹${(item.price * item.quantity).toStringAsFixed(0)}",
+                                style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500)),
+                          ],
+                        ),
+                      )),
+
+                  const Divider(height: 16),
+
+                  // Payment
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Payment",
+                          style: TextStyle(color: Colors.grey)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          order.paymentMethod.toUpperCase(),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: _green,
+                              fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // ── Action Buttons ──────────────────────────────
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton.icon(
+                onPressed: () =>
+                    InvoiceGenerator.downloadInvoice(context, order),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _green,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const Icon(Icons.download_outlined),
+                label: const Text(
+                  "Download / Share Invoice",
+                  style: TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                        context, '/dashboard', (r) => false),
+                    icon: const Icon(Icons.home_outlined),
+                    label: const Text("Home"),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                        context, '/sale-list', (r) => r.isFirst),
+                    icon: const Icon(Icons.receipt_long_outlined,
+                        color: _green),
+                    label: const Text("View All Sales",
+                        style: TextStyle(color: _green)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: const BorderSide(color: _green),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
     );
   }
 }
