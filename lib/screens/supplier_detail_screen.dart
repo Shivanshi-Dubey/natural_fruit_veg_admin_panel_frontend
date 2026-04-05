@@ -35,16 +35,18 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
   Future<void> _fetchPurchases() async {
     setState(() { isLoading = true; hasError = false; });
     try {
+      // ✅ FIXED: correct endpoint is /purchaseInvoices?supplierId=
       final res = await http.get(
-        Uri.parse("$baseUrl/purchases?supplierId=${widget.supplier.id}"),
+        Uri.parse("$baseUrl/purchaseInvoices?supplierId=${widget.supplier.id}"),
       );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        final list = data is List ? data : (data['purchases'] ?? []);
+        final list = (data is List ? data : (data['invoices'] ?? [])) as List;
+        // ✅ normalize fields: backend uses 'createdAt' not 'date'
         list.sort((a, b) {
-          final aDate = DateTime.tryParse(a['date'] ?? '') ?? DateTime(2000);
-          final bDate = DateTime.tryParse(b['date'] ?? '') ?? DateTime(2000);
-          return bDate.compareTo(aDate); // latest first
+          final aDate = DateTime.tryParse(a['createdAt'] ?? '') ?? DateTime(2000);
+          final bDate = DateTime.tryParse(b['createdAt'] ?? '') ?? DateTime(2000);
+          return bDate.compareTo(aDate);
         });
         setState(() { purchases = list; isLoading = false; });
       } else {
@@ -273,8 +275,9 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
   }
 
   Widget _buildPurchaseCard(dynamic p) {
-    final date = DateTime.tryParse(p['date'] ?? '') ?? DateTime.now();
-    final items = (p['items'] as List?) ?? [];
+    // ✅ backend uses 'createdAt' and 'products' (not 'date'/'items')
+    final date = DateTime.tryParse(p['createdAt'] ?? '') ?? DateTime.now();
+    final items = (p['products'] as List?) ?? [];
     final totalAmount =
         ((p['totalAmount'] as num?) ?? 0).toDouble();
     final paidAmount =
