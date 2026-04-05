@@ -35,9 +35,9 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
   Future<void> _fetchPurchases() async {
     setState(() { isLoading = true; hasError = false; });
     try {
-      // ✅ FIXED: correct endpoint is /purchaseInvoices?supplierId=
+      // ✅ FIXED: correct endpoint is /admin/purchase-invoices?supplierId=
       final res = await http.get(
-        Uri.parse("$baseUrl/purchaseInvoices?supplierId=${widget.supplier.id}"),
+        Uri.parse("$baseUrl/admin/purchase-invoices?supplierId=${widget.supplier.id}"),
       );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
