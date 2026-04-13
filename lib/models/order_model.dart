@@ -27,14 +27,13 @@ class Order {
   final double handlingCharge;
   final double grandTotal;
 
-
   final String orderStatus;
 
   /// ✅ RETURN STATUS
   final String returnStatus; // none | requested | approved | rejected
 
   /// 💳 PAYMENT INFO
-  final String paymentMethod; // cod | upi
+  final String paymentMethod; // cod | online
   final String paymentStatus; // pending | paid | collected | completed
   final bool cashDepositedToAdmin;
 
@@ -50,7 +49,7 @@ class Order {
     required this.handlingCharge,
     required this.grandTotal,
     required this.orderStatus,
-    required this.returnStatus, // ✅ ADDED HERE
+    required this.returnStatus,
     required this.paymentMethod,
     required this.paymentStatus,
     required this.cashDepositedToAdmin,
@@ -66,6 +65,7 @@ class Order {
     final deliveryBoy = json['deliveryBoy'];
     final List productsJson = (json['products'] as List? ?? []);
 
+    // 👤 CUSTOMER NAME
     final String resolvedCustomerName;
     if (user is Map) {
       resolvedCustomerName = (user['name'] ?? 'Unknown') as String;
@@ -75,6 +75,7 @@ class Order {
       resolvedCustomerName = 'Unknown';
     }
 
+    // 🚚 DELIVERY BOY
     final String? resolvedDeliveryBoyName;
     final String? resolvedDeliveryBoyId;
 
@@ -89,33 +90,36 @@ class Order {
 
     final createdAtRaw = json['createdAt'];
 
+    // 🔥 NORMALIZE PAYMENT METHOD (VERY IMPORTANT)
+    String rawPaymentMethod = (json['paymentMethod'] ?? 'cod').toString();
+
+    String normalizedPaymentMethod;
+    if (rawPaymentMethod == 'cod') {
+      normalizedPaymentMethod = 'cod';
+    } else {
+      // treat everything else (upi/online/etc) as online
+      normalizedPaymentMethod = 'online';
+    }
+
     return Order(
       id: (json['_id'] ?? '').toString(),
       customerName: resolvedCustomerName,
-      items: productsJson
-          .map((e) => OrderItem.fromJson(e))
-          .toList(),
-      deliveryCharge:
-          (json['deliveryCharge'] ?? 0).toDouble(),
-      handlingCharge:
-          (json['handlingCharge'] ?? 0).toDouble(),
-      grandTotal:
-          (json['grandTotal'] ?? 0).toDouble(), 
-      orderStatus:
-          (json['orderStatus'] ?? 'placed') as String,
+      items: productsJson.map((e) => OrderItem.fromJson(e)).toList(),
 
-      /// ✅ RETURN STATUS FIXED
-      returnStatus:
-          (json['returnStatus'] ?? 'none') as String,
+      deliveryCharge: (json['deliveryCharge'] ?? 0).toDouble(),
+      handlingCharge: (json['handlingCharge'] ?? 0).toDouble(),
+      grandTotal: (json['grandTotal'] ?? 0).toDouble(),
+
+      orderStatus: (json['orderStatus'] ?? 'placed') as String,
+
+      /// ✅ RETURN STATUS
+      returnStatus: (json['returnStatus'] ?? 'none') as String,
 
       /// 💳 PAYMENT INFO
-      paymentMethod:
-          (json['paymentMethod'] ?? 'cod') as String,
-      paymentStatus:
-          (json['paymentStatus'] ?? 'pending') as String,
+      paymentMethod: normalizedPaymentMethod,
+      paymentStatus: (json['paymentStatus'] ?? 'pending') as String,
       cashDepositedToAdmin:
-          (json['cashDepositedToAdmin'] ?? false)
-              as bool,
+          (json['cashDepositedToAdmin'] ?? false) as bool,
 
       createdAt: createdAtRaw != null
           ? DateTime.parse(createdAtRaw as String)
@@ -126,10 +130,17 @@ class Order {
     );
   }
 
-  /// Total without delivery
+  /// 🧮 Total without delivery
   double get itemsTotal =>
       items.fold(0, (sum, i) => sum + (i.price * i.quantity));
 
-  /// Total including delivery
-  double get totalPrice =>grandTotal;
+  /// 💰 Final total
+  double get totalPrice => grandTotal;
+
+  /// 🎯 UI Helper (optional but useful)
+  String get paymentMethodDisplay {
+    return paymentMethod == "online"
+        ? "Online Payment"
+        : "Cash on Delivery";
+  }
 }

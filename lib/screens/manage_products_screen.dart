@@ -98,7 +98,6 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                   ),
                                 ),
                               );
-                              // ✅ Refresh after coming back
                               _resetFilter();
                             },
                           ),
@@ -107,51 +106,68 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
 
                       const SizedBox(height: 16),
 
-                      // ── Category Filter Chips ────────────────────────
+                      // ── Category Filter Chips + Bulk OOS Toggle ──────
                       SizedBox(
                         height: 36,
-                        child: ListView.separated(
+                        child: ListView(
                           scrollDirection: Axis.horizontal,
-                          itemCount: _getCategories(allProducts).length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(width: 8),
-                          itemBuilder: (_, i) {
-                            final cat = _getCategories(allProducts)[i];
-                            final isSelected = _selectedCategory == cat;
-                            return GestureDetector(
-                              onTap: () {
-                                setState(() => _selectedCategory = cat);
-                                _applyFilters(
-                                    _lastSearchQuery, cat, allProducts);
-                              },
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 7),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? const Color(0xFF2E7D32)
-                                      : Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: isSelected
-                                        ? const Color(0xFF2E7D32)
-                                        : Colors.grey.shade300,
+                          children: [
+                            ..._getCategories(allProducts).map((cat) {
+                              final isSelected = _selectedCategory == cat;
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() => _selectedCategory = cat);
+                                    _applyFilters(
+                                        _lastSearchQuery, cat, allProducts);
+                                  },
+                                  child: AnimatedContainer(
+                                    duration:
+                                        const Duration(milliseconds: 200),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 14, vertical: 7),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? const Color(0xFF2E7D32)
+                                          : Colors.grey.shade100,
+                                      borderRadius:
+                                          BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? const Color(0xFF2E7D32)
+                                            : Colors.grey.shade300,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      cat,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: isSelected
+                                            ? Colors.white
+                                            : Colors.grey.shade700,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                                child: Text(
-                                  cat,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: isSelected
-                                        ? Colors.white
-                                        : Colors.grey.shade700,
-                                  ),
-                                ),
+                              );
+                            }),
+
+                            // Bulk OOS toggle — only when a category is selected
+                            if (_selectedCategory != 'All') ...[
+                              const SizedBox(width: 4),
+                              _BulkOosButton(
+                                category: _selectedCategory,
+                                products: allProducts
+                                    .where((p) =>
+                                        p.category == _selectedCategory)
+                                    .toList(),
+                                provider: provider,
+                                onDone: _resetFilter,
                               ),
-                            );
-                          },
+                            ],
+                          ],
                         ),
                       ),
 
@@ -173,8 +189,8 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                         child: Container(
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            border:
-                                Border.all(color: const Color(0xFFE5E7EB)),
+                            border: Border.all(
+                                color: const Color(0xFFE5E7EB)),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: _filteredProducts.isEmpty
@@ -198,8 +214,8 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                           onPressed: () {
                                             setState(() =>
                                                 _selectedCategory = 'All');
-                                            _applyFilters('', 'All',
-                                                allProducts);
+                                            _applyFilters(
+                                                '', 'All', allProducts);
                                           },
                                           child: const Text('Clear filter'),
                                         ),
@@ -214,7 +230,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                     child: DataTable(
                                       columnSpacing: 24,
                                       headingRowColor:
-                                          MaterialStateProperty.all(
+                                          WidgetStateProperty.all(
                                         const Color(0xFFF9FAFB),
                                       ),
                                       columns: const [
@@ -225,8 +241,8 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                         DataColumn(label: Text('Status')),
                                         DataColumn(label: Text('Actions')),
                                       ],
-                                      rows:
-                                          _filteredProducts.map((product) {
+                                      rows: _filteredProducts
+                                          .map((product) {
                                         final bool inStock =
                                             product.stock > 0;
 
@@ -239,8 +255,8 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                                 children: [
                                                   ClipRRect(
                                                     borderRadius:
-                                                        BorderRadius.circular(
-                                                            6),
+                                                        BorderRadius
+                                                            .circular(6),
                                                     child: Image.network(
                                                       product.imagePath
                                                               .isNotEmpty
@@ -249,9 +265,10 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                                       width: 40,
                                                       height: 40,
                                                       fit: BoxFit.cover,
-                                                      errorBuilder:
-                                                          (_, __, ___) =>
-                                                              Container(
+                                                      errorBuilder: (_,
+                                                              __,
+                                                              ___) =>
+                                                          Container(
                                                         width: 40,
                                                         height: 40,
                                                         color: Colors
@@ -278,22 +295,24 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                             // ── Category ───────────────
                                             DataCell(
                                               Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
+                                                padding: const EdgeInsets
+                                                    .symmetric(
                                                         horizontal: 8,
                                                         vertical: 4),
                                                 decoration: BoxDecoration(
                                                   color: Colors.blue
                                                       .withOpacity(0.08),
                                                   borderRadius:
-                                                      BorderRadius.circular(4),
+                                                      BorderRadius
+                                                          .circular(4),
                                                 ),
                                                 child: Text(
                                                   product.category,
                                                   style: const TextStyle(
                                                     fontSize: 12,
                                                     color: Colors.blue,
-                                                    fontWeight: FontWeight.w500,
+                                                    fontWeight:
+                                                        FontWeight.w500,
                                                   ),
                                                 ),
                                               ),
@@ -325,8 +344,8 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                             // ── Status Badge ───────────
                                             DataCell(
                                               Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
+                                                padding: const EdgeInsets
+                                                    .symmetric(
                                                         horizontal: 8,
                                                         vertical: 4),
                                                 decoration: BoxDecoration(
@@ -336,7 +355,8 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                                       : Colors.red
                                                           .withOpacity(0.1),
                                                   borderRadius:
-                                                      BorderRadius.circular(4),
+                                                      BorderRadius
+                                                          .circular(4),
                                                 ),
                                                 child: Text(
                                                   inStock
@@ -347,7 +367,8 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                                         ? Colors.green
                                                         : Colors.red,
                                                     fontSize: 12,
-                                                    fontWeight: FontWeight.w600,
+                                                    fontWeight:
+                                                        FontWeight.w600,
                                                   ),
                                                 ),
                                               ),
@@ -375,12 +396,13 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                                           .symmetric(
                                                               horizontal: 8,
                                                               vertical: 5),
-                                                      decoration: BoxDecoration(
+                                                      decoration:
+                                                          BoxDecoration(
                                                         color: inStock
-                                                            ? Colors
-                                                                .orange.shade50
-                                                            : Colors
-                                                                .green.shade50,
+                                                            ? Colors.orange
+                                                                .shade50
+                                                            : Colors.green
+                                                                .shade50,
                                                         borderRadius:
                                                             BorderRadius
                                                                 .circular(6),
@@ -426,12 +448,12 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                                             showBack: true,
                                                             child:
                                                                 AddProductScreen(
-                                                              product: product,
+                                                              product:
+                                                                  product,
                                                             ),
                                                           ),
                                                         ),
                                                       );
-                                                      // ✅ Refresh after edit
                                                       _resetFilter();
                                                     },
                                                   ),
@@ -444,7 +466,8 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                                       color: Colors.red,
                                                     ),
                                                     onPressed: () async {
-                                                      final confirm =await showDialog<bool>(
+                                                      final confirm =
+                                                          await showDialog<bool>(
                                                         context: context,
                                                         builder: (_) =>
                                                             AlertDialog(
@@ -466,7 +489,8 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                                                   Navigator.pop(
                                                                       context,
                                                                       true),
-                                                              child: const Text(
+                                                              child:
+                                                                  const Text(
                                                                 'Delete',
                                                                 style: TextStyle(
                                                                     color: Colors
@@ -500,6 +524,112 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                     ],
                   ),
                 ),
+    );
+  }
+}
+
+// ── Bulk OOS / Active Button ─────────────────────────────────────────────────
+
+class _BulkOosButton extends StatelessWidget {
+  const _BulkOosButton({
+    required this.category,
+    required this.products,
+    required this.provider,
+    required this.onDone,
+  });
+
+  final String category;
+  final List<Product> products;
+  final ProductProvider provider;
+  final VoidCallback onDone;
+
+  bool get _allOutOfStock =>
+      products.isNotEmpty && products.every((p) => p.stock == 0);
+
+  Future<void> _toggle(BuildContext context) async {
+    final makeOos = !_allOutOfStock;
+    final newStock = makeOos ? 0 : 10;
+    final label = makeOos ? 'Mark All OOS' : 'Mark All Active';
+    final message = makeOos
+        ? 'Set stock to 0 for all ${products.length} product(s) in "$category"?'
+        : 'Restore stock (set to 10) for all ${products.length} product(s) in "$category"?';
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(label),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: makeOos ? Colors.red : Colors.green,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      for (final p in products) {
+        await provider.updateProductStock(p.id, newStock);
+      }
+      onDone();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final allOos = _allOutOfStock;
+    return GestureDetector(
+      onTap: () => _toggle(context),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color:
+              allOos ? Colors.green.shade50 : Colors.orange.shade50,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: allOos
+                ? Colors.green.shade300
+                : Colors.orange.shade300,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              allOos
+                  ? Icons.check_circle_outline
+                  : Icons.block_outlined,
+              size: 14,
+              color: allOos
+                  ? Colors.green.shade700
+                  : Colors.orange.shade700,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              allOos ? 'Mark All Active' : 'Mark All OOS',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: allOos
+                    ? Colors.green.shade700
+                    : Colors.orange.shade700,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
