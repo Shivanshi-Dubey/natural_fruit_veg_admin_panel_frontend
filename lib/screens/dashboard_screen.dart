@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -23,6 +25,10 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   Timer? _autoRefreshTimer;
   String _salesFilter = 'Last 7 Days';
+  double _upiRevenue = 0;
+double _codRevenue = 0;
+int _upiOrders = 0;
+int _codOrders = 0;
 
   @override
   void initState() {
@@ -35,6 +41,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _loadData() {
     context.read<ProductProvider>().fetchProducts();
     context.read<OrderProvider>().fetchOrders();
+     _fetchAnalytics();
   }
 
   @override
@@ -110,6 +117,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
     );
   }
+
+  Future<void> _fetchAnalytics() async {
+  try {
+    final res = await http.get(
+      Uri.parse('https://naturalfruitveg.com/api/admin/analytics/summary'),
+    );
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      setState(() {
+        _upiRevenue = (data['upiRevenue'] ?? 0).toDouble();
+        _codRevenue = (data['codRevenue'] ?? 0).toDouble();
+        _upiOrders = (data['upiOrders'] ?? 0);
+        _codOrders = (data['codOrders'] ?? 0);
+      });
+    }
+  } catch (e) {
+    debugPrint("Analytics error: $e");
+  }
+}
 
   void _showLowStockProducts(List<Product> products) {
     final low = products.where((p) => p.stock <= 5).toList()
@@ -415,6 +441,90 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         label: 'Items Sold',
                         value: totalItemsSold(orders).toString(),
                         hint: 'Total quantity sold',
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ✅ UPI vs COD Revenue Cards
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.purple.shade50,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: Colors.purple.shade100),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.qr_code, color: Colors.purple.shade400, size: 18),
+                                  const SizedBox(width: 6),
+                                  Text("UPI / Online",
+                                      style: TextStyle(color: Colors.purple.shade400, fontSize: 13)),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                "₹${_upiRevenue.toStringAsFixed(0)}",
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.purple.shade600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "$_upiOrders orders this month",
+                                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Container(
+                          margin: const EdgeInsets.only(left: 8),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: Colors.green.shade100),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.money, color: Colors.green.shade400, size: 18),
+                                  const SizedBox(width: 6),
+                                  Text("Cash on Delivery",
+                                      style: TextStyle(color: Colors.green.shade400, fontSize: 13)),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                "₹${_codRevenue.toStringAsFixed(0)}",
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green.shade600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "$_codOrders orders this month",
+                                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
