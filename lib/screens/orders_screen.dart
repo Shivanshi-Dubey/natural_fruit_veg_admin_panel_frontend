@@ -206,7 +206,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     } else if (statusFilter == "upi_paid") {
       filtered = filtered
           .where((o) =>
-              o.paymentMethod == 'upi' &&
+              (o.paymentMethod == 'online' || o.paymentMethod == 'upi') &&
               o.paymentStatus == 'paid')
           .toList();
     }
@@ -220,7 +220,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       totalRevenue += o.grandTotal;
       if (o.paymentMethod == 'cod' && o.paymentStatus == 'pending')
         codPending += o.grandTotal;
-      if (o.paymentMethod == 'upi' && o.paymentStatus == 'paid')
+       if ((o.paymentMethod == 'online' || o.paymentMethod == 'upi') && o.paymentStatus == 'paid')
         upiRevenue += o.grandTotal;
     }
     return {
